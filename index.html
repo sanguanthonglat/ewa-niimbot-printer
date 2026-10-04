@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>เอวาชาใต้ - NIIMBOT B21 Printer</title>
+
+  <!-- NIIMBOT Web Bluetooth Driver -->
+  <script src="https://cdn.jsdelivr.net/gh/iscarelli/niimbot-web-bluetooth@main/src/niimbot.js"></script>
+
+  <!-- Code 128 -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 18px;
+      background: #f3f4f6;
+      color: #111;
+      font-family: Arial, "Noto Sans Thai", sans-serif;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.08);
+    }
+
+    h1 {
+      margin: 0;
+      text-align: center;
+      font-size: 27px;
+    }
+
+    .subtitle {
+      margin-top: 6px;
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .status {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 12px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .red {
+      background: #ffe4e6;
+      color: #b91c1c;
+    }
+
+    .green {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .yellow {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    button {
+      width: 100%;
+      min-height: 54px;
+      margin-top: 12px;
+      padding: 13px;
+      border: 0;
+      border-radius: 13px;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .connect {
+      background: #1267d6;
+      color: #fff;
+    }
+
+    .print {
+      background: #111;
+      color: #fff;
+    }
+
+    .preview-btn {
+      background: #e5e7eb;
+      color: #111;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      height: 50px;
+      padding: 0 13px;
+      border: 1px solid #ccc;
+      border-radius: 11px;
+      font-size: 17px;
+      background: #fff;
+    }
+
+    .preview-title {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+
+    .preview-wrap {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      overflow: auto;
+    }
+
+    #previewCanvas {
+      width: 400px;
+      height: 240px;
+      max-width: 100%;
+      background: #f4d328;
+      border: 1px solid #999;
+    }
+
+    .size {
+      margin-top: 8px;
+      text-align: center;
+      color: #666;
+      font-size: 13px;
+    }
+
+    .printer-info {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 10px;
+      background: #eff6ff;
+      font-size: 13px;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .error {
+      display: none;
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 10px;
+      background: #fee2e2;
+      color: #991b1b;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    #barcodeCanvas {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <!-- CONNECTION -->
+  <div class="card">
+
+    <h1>🖨 NIIMBOT B21</h1>
+
+    <div class="subtitle">
+      เอวาชาใต้ • ฉลาก 50 × 30 mm
+    </div>
+
+    <div
+      id="status"
+      class="status red"
+    >
+      🔴 ยังไม่ได้เชื่อมต่อ
+    </div>
+
+    <button
+      id="connectBtn"
+      class="connect"
+      onclick="connectPrinter()"
+    >
+      🔵 เชื่อมต่อ B21
+    </button>
+
+    <div
+      id="printerInfo"
+      class="printer-info"
+    >
+      Browser: กำลังตรวจสอบ...
+    </div>
+
+    <div
+      id="errorBox"
+      class="error"
+    ></div>
+
+  </div>
+
+
+  <!-- LABEL DATA -->
+  <div class="card">
+
+    <label>
+      ชื่อชา
+    </label>
+
+    <input
+      id="product"
+      type="text"
+      value="ชาไทย"
+      oninput="drawPreview()"
+    >
+
+
+    <label>
+      วันที่ผลิต
+    </label>
+
+    <input
+      id="mfgDate"
+      type="date"
+      onchange="drawPreview()"
+    >
+
+
+    <label>
+      รหัสสินค้า
+    </label>
+
+    <input
+      id="code"
+      type="text"
+      value="QR-20261004-0001"
+      oninput="drawPreview()"
+    >
+
+
+    <button
+      class="preview-btn"
+      onclick="drawPreview()"
+    >
+      🔄 อัปเดตตัวอย่าง
+    </button>
+
+  </div>
+
+
+  <!-- PREVIEW -->
+  <div class="card">
+
+    <div class="preview-title">
+      ตัวอย่างฉลาก
+    </div>
+
+    <div class="preview-wrap">
+
+      <canvas
+        id="previewCanvas"
+        width="400"
+        height="240"
+      ></canvas>
+
+    </div>
+
+    <div class="size">
+      ฉลากสีเหลือง 50 × 30 mm
+    </div>
+
+    <button
+      id="printBtn"
+      class="print"
+      onclick="printLabel()"
+      disabled
+    >
+      🖨 พิมพ์ทดสอบ 1 ใบ
+    </button>
+
+  </div>
+
+</div>
+
+
+<!-- Barcode work canvas -->
+<canvas
+  id="barcodeCanvas"
+  width="700"
+  height="120"
+></canvas>
+
+
+<script>
+
+  // =========================================================
+  // B21 STARTING CONFIG
+  // =========================================================
+
+  const MODEL = {
+    name_prefixes: ["B21"],
+    task: "b1",
+    dpi: 203,
+    density: 3,
+    label_type: 1,
+    speed: 1
+  };
+
+  /*
+    50 × 30 mm @ 203 dpi
+
+    B1 family uses 384 printable pixels across the head
+    30 mm feed direction ≈ 240 px.
+
+    B21 is being tested against the same b1 family geometry.
+  */
+
+  const SIZE = {
+    w_px: 384,
+    h_px: 240,
+    offset_y_px: 4
+  };
+
+
+  let connected = false;
+
+
+  // =========================================================
+  // START
+  // =========================================================
+
+  window.addEventListener(
+    "load",
+    function() {
+
+      setToday();
+
+      readUrlParameters();
+
+      drawPreview();
+
+      checkEnvironment();
+
+    }
+  );
+
+
+  // =========================================================
+  // ENVIRONMENT
+  // =========================================================
+
+  function checkEnvironment() {
+
+    const info =
+      document.getElementById("printerInfo");
+
+
+    if (typeof Niimbot === "undefined") {
+
+      info.innerHTML =
+        "❌ โหลด NIIMBOT Driver ไม่สำเร็จ";
+
+      showError(
+        "ไม่สามารถโหลด niimbot.js ได้\nกรุณาตรวจสอบอินเทอร์เน็ต"
+      );
+
+      return;
+    }
+
+
+    if (!window.isSecureContext) {
+
+      info.innerHTML =
+        "❌ หน้าเว็บไม่ได้ทำงานผ่าน HTTPS";
+
+      showError(
+        "Web Bluetooth ต้องเปิดผ่าน HTTPS"
+      );
+
+      return;
+    }
+
+
+    if (!navigator.bluetooth) {
+
+      info.innerHTML =
+        "❌ Browser นี้ไม่มี Web Bluetooth";
+
+      showError(
+        "ไม่พบ navigator.bluetooth\n\n" +
+        "Android: เปิดหน้านี้ด้วย Chrome โดยตรง\n" +
+        "อย่าเปิดจาก WebView ภายใน LINE/Facebook/แอปอื่น"
+      );
+
+      return;
+    }
+
+
+    info.innerHTML =
+      "✅ Web Bluetooth พร้อมใช้งาน" +
+      "<br>" +
+      "Driver: " +
+      escapeHtml(
+        String(
+          Niimbot.VERSION || "loaded"
+        )
+      );
+
+  }
+
+
+  // =========================================================
+  // CONNECT
+  // =========================================================
+
+  async function connectPrinter() {
+
+    clearError();
+
+
+    if (typeof Niimbot === "undefined") {
+
+      showError(
+        "NIIMBOT Driver ยังไม่ถูกโหลด"
+      );
+
+      return;
+    }
+
+
+    if (!navigator.bluetooth) {
+
+      showError(
+        "Browser นี้ไม่รองรับ Web Bluetooth"
+      );
+
+      return;
+    }
+
+
+    setStatus(
+      "yellow",
+      "🟡 กำลังค้นหา B21..."
+    );
+
+
+    document
+      .getElementById("connectBtn")
+      .disabled = true;
+
+
+    try {
+
+      /*
+        identify() จะเปิด Bluetooth chooser
+        ต้องเรียกจากการกดปุ่มของผู้ใช้
+      */
+
+      const result =
+        await Niimbot.identify(MODEL);
+
+
+      connected = true;
+
+
+      document
+        .getElementById("printBtn")
+        .disabled = false;
+
+
+      setStatus(
+        "green",
+        "🟢 เชื่อมต่อเครื่องพิมพ์แล้ว"
+      );
+
+
+      document
+        .getElementById("connectBtn")
+        .textContent =
+          "🔄 เชื่อมต่อใหม่";
+
+
+      showPrinterInfo(
+        result
+      );
+
+    }
+    catch (error) {
+
+      connected = false;
+
+
+      document
+        .getElementById("printBtn")
+        .disabled = true;
+
+
+      setStatus(
+        "red",
+        "🔴 เชื่อมต่อไม่สำเร็จ"
+      );
+
+
+      showError(
+        errorText(error)
+      );
+
+    }
+    finally {
+
+      document
+        .getElementById("connectBtn")
+        .disabled = false;
+
+    }
+
+  }
+
+
+  // =========================================================
+  // PRINTER INFO
+  // =========================================================
+
+  function showPrinterInfo(result) {
+
+    const detected =
+      Niimbot.printer || result || {};
+
+
+    const modelId =
+      detected.modelId != null
+        ? detected.modelId
+        : "-";
+
+
+    const protocol =
+      detected.protocolVersion != null
+        ? detected.protocolVersion
+        : "-";
+
+
+    const task =
+      detected.task || "-";
+
+
+    const dpi =
+      detected.dpi || "-";
+
+
+    document
+      .getElementById("printerInfo")
+      .innerHTML =
+
+        "✅ Bluetooth เชื่อมต่อแล้ว" +
+
+        "<br>Model ID: <b>" +
+        escapeHtml(String(modelId)) +
+        "</b>" +
+
+        "<br>Protocol: <b>" +
+        escapeHtml(String(protocol)) +
+        "</b>" +
+
+        "<br>Task: <b>" +
+        escapeHtml(String(task)) +
+        "</b>" +
+
+        "<br>DPI: <b>" +
+        escapeHtml(String(dpi)) +
+        "</b>";
+
+  }
+
+
+  // =========================================================
+  // PRINT
+  // =========================================================
+
+  async function printLabel() {
+
+    clearError();
+
+
+    if (!connected) {
+
+      showError(
+        "กรุณาเชื่อมต่อ B21 ก่อน"
+      );
+
+      return;
+    }
+
+
+    const code =
+      document
+        .getElementById("code")
+        .value
+        .trim();
+
+
+    if (!code) {
+
+      showError(
+        "กรุณาระบุรหัสสินค้า"
+      );
+
+      return;
+    }
+
+
+    const printCanvas =
+      createPrintCanvas();
+
+
+    const imageUrl =
+      printCanvas.toDataURL(
+        "image/png"
+      );
+
+
+    setStatus(
+      "yellow",
+      "🟡 กำลังส่งข้อมูลไป B21..."
+    );
+
+
+    document
+      .getElementById("printBtn")
+      .disabled = true;
+
+
+    try {
+
+      await Niimbot.printImage(
+        imageUrl,
+        {
+          model: MODEL,
+          size: SIZE,
+          copies: 1,
+          density: 3,
+
+          onProgress: function(s) {
+
+            console.log(
+              "NIIMBOT",
+              s
+            );
+
+          }
+        }
+      );
+
+
+      setStatus(
+        "green",
+        "✅ พิมพ์เสร็จแล้ว"
+      );
+
+    }
+    catch (error) {
+
+      setStatus(
+        "green",
+        "🟢 เครื่องพิมพ์เชื่อมต่ออยู่"
+      );
+
+
+      showError(
+        "พิมพ์ไม่สำเร็จ\n\n" +
+        errorText(error)
+      );
+
+    }
+    finally {
+
+      document
+        .getElementById("printBtn")
+        .disabled = false;
+
+    }
+
+  }
+
+
+  // =========================================================
+  // PRINT CANVAS
+  // =========================================================
+
+  function createPrintCanvas() {
+
+    const canvas =
+      document.createElement("canvas");
+
+
+    canvas.width =
+      SIZE.w_px;
+
+
+    canvas.height =
+      SIZE.h_px;
+
+
+    const ctx =
+      canvas.getContext("2d");
+
+
+    ctx.fillStyle =
+      "#ffffff";
+
+
+    ctx.fillRect(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+
+    drawLabel(
+      ctx,
+      canvas.width,
+      canvas.height,
+      false
+    );
+
+
+    return canvas;
+
+  }
+
+
+  // =========================================================
+  // PREVIEW
+  // =========================================================
+
+  function drawPreview() {
+
+    const canvas =
+      document.getElementById(
+        "previewCanvas"
+      );
+
+
+    const ctx =
+      canvas.getContext("2d");
+
+
+    ctx.clearRect(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+
+    /*
+      กระดาษจริงเป็นสีเหลือง
+      preview จึงแสดงสีเหลือง
+
+      ตอนส่งไปเครื่องพิมพ์จะใช้พื้นขาว
+      เพราะ B21 เป็น thermal monochrome
+    */
+
+    ctx.fillStyle =
+      "#f4d328";
+
+
+    ctx.fillRect(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+
+    drawLabel(
+      ctx,
+      canvas.width,
+      canvas.height,
+      true
+    );
+
+  }
+
+
+  // =========================================================
+  // DRAW LABEL
+  // =========================================================
+
+  function drawLabel(
+    ctx,
+    width,
+    height,
+    preview
+  ) {
+
+    const product =
+      document
+        .getElementById("product")
+        .value
+        .trim() || "ชาไทย";
+
+
+    const date =
+      document
+        .getElementById("mfgDate")
+        .value;
+
+
+    const code =
+      document
+        .getElementById("code")
+        .value
+        .trim();
+
+
+    ctx.fillStyle =
+      "#000";
+
+
+    ctx.textAlign =
+      "center";
+
+
+    ctx.textBaseline =
+      "middle";
+
+
+    // -------------------------------------------------------
+    // PRODUCT
+    // -------------------------------------------------------
+
+    ctx.font =
+      "bold 40px Arial, sans-serif";
+
+
+    ctx.fillText(
+      product,
+      width / 2,
+      35
+    );
+
+
+    // -------------------------------------------------------
+    // DATE
+    // -------------------------------------------------------
+
+    ctx.font =
+      "bold 23px Arial, sans-serif";
+
+
+    ctx.fillText(
+      "ผลิต " +
+      formatDate(date),
+      width / 2,
+      75
+    );
+
+
+    // -------------------------------------------------------
+    // BARCODE
+    // -------------------------------------------------------
+
+    if (code) {
+
+      const barcodeCanvas =
+        document.getElementById(
+          "barcodeCanvas"
+        );
+
+
+      try {
+
+        JsBarcode(
+          barcodeCanvas,
+          code,
+          {
+            format: "CODE128",
+            displayValue: false,
+            margin: 0,
+            width: 2,
+            height: 70,
+            background: "#ffffff",
+            lineColor: "#000000"
+          }
+        );
+
+
+        /*
+          preview บนสติกเกอร์เหลือง:
+          barcode จะวาดโดยไม่สร้างกรอบตกแต่งเพิ่ม
+
+          print bitmap:
+          พื้นหลังเป็นขาวอยู่แล้ว
+        */
+
+        if (preview) {
+
+          ctx.fillStyle =
+            "#fff";
+
+
+          ctx.fillRect(
+            16,
+            101,
+            width - 32,
+            78
+          );
+
+        }
+
+
+        ctx.drawImage(
+          barcodeCanvas,
+          20,
+          106,
+          width - 40,
+          67
+        );
+
+      }
+      catch (e) {
+
+        console.error(e);
+
+      }
+
+    }
+
+
+    // -------------------------------------------------------
+    // HUMAN READABLE CODE
+    // -------------------------------------------------------
+
+    ctx.fillStyle =
+      "#000";
+
+
+    let codeFont =
+      18;
+
+
+    if (code.length > 24) {
+
+      codeFont = 15;
+
+    }
+
+
+    ctx.font =
+      "bold " +
+      codeFont +
+      "px Arial, sans-serif";
+
+
+    ctx.fillText(
+      code,
+      width / 2,
+      205
+    );
+
+  }
+
+
+  // =========================================================
+  // URL PARAMETERS
+  // =========================================================
+
+  /*
+    ภายหลัง Google Apps Script จะเปิด URL เช่น:
+
+    ?product=ชาไทย
+    &date=2026-10-04
+    &code=QR-20261004-0001
+
+    หน้า printer จะกรอกข้อมูลให้เอง
+  */
+
+  function readUrlParameters() {
+
+    const params =
+      new URLSearchParams(
+        window.location.search
+      );
+
+
+    const product =
+      params.get("product");
+
+
+    const date =
+      params.get("date");
+
+
+    const code =
+      params.get("code");
+
+
+    if (product) {
+
+      document
+        .getElementById("product")
+        .value = product;
+
+    }
+
+
+    if (date) {
+
+      document
+        .getElementById("mfgDate")
+        .value = normalizeDate(date);
+
+    }
+
+
+    if (code) {
+
+      document
+        .getElementById("code")
+        .value = code;
+
+    }
+
+  }
+
+
+  // =========================================================
+  // TODAY
+  // =========================================================
+
+  function setToday() {
+
+    const now =
+      new Date();
+
+
+    const yyyy =
+      now.getFullYear();
+
+
+    const mm =
+      String(
+        now.getMonth() + 1
+      ).padStart(2, "0");
+
+
+    const dd =
+      String(
+        now.getDate()
+      ).padStart(2, "0");
+
+
+    document
+      .getElementById("mfgDate")
+      .value =
+        yyyy +
+        "-" +
+        mm +
+        "-" +
+        dd;
+
+  }
+
+
+  // =========================================================
+  // NORMALIZE DATE
+  // =========================================================
+
+  function normalizeDate(value) {
+
+    if (!value) {
+      return "";
+    }
+
+
+    let match =
+      String(value).match(
+        /^(\d{4})-(\d{2})-(\d{2})$/
+      );
+
+
+    if (match) {
+
+      return value;
+
+    }
+
+
+    match =
+      String(value).match(
+        /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/
+      );
+
+
+    if (match) {
+
+      return (
+        match[3] +
+        "-" +
+        String(match[2]).padStart(2,"0") +
+        "-" +
+        String(match[1]).padStart(2,"0")
+      );
+
+    }
+
+
+    return "";
+
+  }
+
+
+  // =========================================================
+  // DISPLAY DATE
+  // =========================================================
+
+  function formatDate(value) {
+
+    if (!value) {
+      return "";
+    }
+
+
+    const match =
+      String(value).match(
+        /^(\d{4})-(\d{2})-(\d{2})$/
+      );
+
+
+    if (!match) {
+      return value;
+    }
+
+
+    return (
+      match[3] +
+      "/" +
+      match[2] +
+      "/" +
+      match[1]
+    );
+
+  }
+
+
+  // =========================================================
+  // STATUS
+  // =========================================================
+
+  function setStatus(
+    type,
+    message
+  ) {
+
+    const el =
+      document.getElementById(
+        "status"
+      );
+
+
+    el.className =
+      "status " +
+      type;
+
+
+    el.textContent =
+      message;
+
+  }
+
+
+  // =========================================================
+  // ERROR
+  // =========================================================
+
+  function showError(message) {
+
+    const box =
+      document.getElementById(
+        "errorBox"
+      );
+
+
+    box.style.display =
+      "block";
+
+
+    box.textContent =
+      message;
+
+  }
+
+
+  function clearError() {
+
+    const box =
+      document.getElementById(
+        "errorBox"
+      );
+
+
+    box.style.display =
+      "none";
+
+
+    box.textContent =
+      "";
+
+  }
+
+
+  // =========================================================
+  // ERROR TEXT
+  // =========================================================
+
+  function errorText(error) {
+
+    if (!error) {
+
+      return "Unknown error";
+
+    }
+
+
+    if (error.message) {
+
+      return error.message;
+
+    }
+
+
+    return String(error);
+
+  }
+
+
+  // =========================================================
+  // ESCAPE HTML
+  // =========================================================
+
+  function escapeHtml(value) {
+
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+  }
+
+</script>
+
+</body>
+</html>
