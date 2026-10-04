@@ -356,7 +356,7 @@
         id="batchNote"
         class="batch-note"
       >
-        พร้อมสำหรับพิมพ์แบบ Batch
+        พร้อมพิมพ์
       </div>
 
     </div>
@@ -423,7 +423,7 @@
         id="progressText"
         class="progress-text"
       >
-        0%
+        0 / 0
       </div>
 
     </div>
@@ -433,6 +433,7 @@
 </div>
 
 
+<!-- Barcode work canvas -->
 <canvas
   id="barcodeCanvas"
   width="700"
@@ -444,7 +445,6 @@
 
   // =========================================================
   // B21 CONFIG
-  // คงค่าจากเครื่องจริงที่ทดสอบสำเร็จแล้ว
   // =========================================================
 
   const MODEL = {
@@ -473,6 +473,8 @@
   let printing = false;
 
   let labelItems = [];
+
+  let currentIndex = 0;
 
 
   // =========================================================
@@ -556,6 +558,31 @@
       );
 
       return;
+
+    }
+
+
+    /*
+      สำหรับ B1/B21 b1 family
+      รักษาค่าที่ปลอดภัยไว้
+    */
+
+    if (
+      typeof Niimbot.BUNDLE_MAX !==
+      "undefined"
+    ) {
+
+      Niimbot.BUNDLE_MAX = 240;
+
+    }
+
+
+    if (
+      typeof Niimbot.PACE_MS !==
+      "undefined"
+    ) {
+
+      Niimbot.PACE_MS = 10;
 
     }
 
@@ -769,7 +796,7 @@
 
 
   // =========================================================
-  // GET CURRENT ITEM
+  // CURRENT INPUT ITEM
   // =========================================================
 
   function getCurrentInputItem() {
@@ -911,30 +938,8 @@
 
     try {
 
-      const imageUrl =
-        createImageUrl(
-          item
-        );
-
-
-      await Niimbot.printImage(
-        imageUrl,
-        {
-          model: MODEL,
-          size: SIZE,
-          copies: 1,
-          density: 3,
-
-          onProgress:
-            function(s) {
-
-              console.log(
-                "NIIMBOT SINGLE",
-                s
-              );
-
-            }
-        }
+      await printOneItem(
+        item
       );
 
 
@@ -954,7 +959,9 @@
 
       showError(
         "พิมพ์ไม่สำเร็จ\n\n" +
-        errorText(error)
+        errorText(
+          error
+        )
       );
 
     }
@@ -970,17 +977,13 @@
 
 
   // =========================================================
-  // NATIVE FAST BATCH
+  // FAST MULTI PRINT
   //
-  // จุดสำคัญของเวอร์ชันนี้:
+  // ใช้ printImage ทีละใบ
+  // ไม่มี delay ระหว่างใบ
   //
-  // ไม่ใช้:
-  // printImage ใบ 1
-  // printImage ใบ 2
-  // printImage ใบ 3
-  //
-  // แต่สร้างภาพทั้งหมดก่อน
-  // แล้วส่งเข้า printBatch เพียงครั้งเดียว
+  // จากการทดสอบจริงกับ B21 เครื่องนี้
+  // วิธีนี้เร็วกว่า printBatch
   // =========================================================
 
   async function printAllLabels() {
@@ -1018,24 +1021,7 @@
     }
 
 
-    if (
-      labelItems.length === 1
-    ) {
-
-      setFormFromItem(
-        labelItems[0]
-      );
-
-      await printCurrentLabel();
-
-      return;
-
-    }
-
-
-    // -------------------------------------------------------
-    // VALIDATE ALL ITEMS
-    // -------------------------------------------------------
+    // ตรวจข้อมูลก่อนเริ่มทั้งหมด
 
     for (
       let i = 0;
@@ -1065,24 +1051,18 @@
 
     printing = true;
 
+    currentIndex = 0;
+
     updatePrintButtons();
+
 
     showProgress(
       0,
-      "กำลังเตรียม " +
-      labelItems.length +
-      " ใบ..."
+      labelItems.length
     );
 
 
     try {
-
-      // -----------------------------------------------------
-      // สร้าง bitmap ของทุกใบก่อน
-      // -----------------------------------------------------
-
-      const imageUrls = [];
-
 
       for (
         let i = 0;
@@ -1090,73 +1070,55 @@
         i++
       ) {
 
-        imageUrls.push(
-          createImageUrl(
-            labelItems[i]
-          )
+        currentIndex = i;
+
+
+        const item =
+          labelItems[i];
+
+
+        /*
+          แสดงข้อมูลใบที่กำลังพิมพ์
+        */
+
+        setFormFromItem(
+          item
+        );
+
+
+        setStatus(
+          "yellow",
+          "⚡ กำลังพิมพ์ " +
+          (i + 1) +
+          " / " +
+          labelItems.length
+        );
+
+
+        updatePrintButtons();
+
+
+        /*
+          สำคัญ:
+          เริ่มใบถัดไปทันทีหลัง printImage resolve
+
+          ไม่มี:
+          - sleep
+          - setTimeout
+          - delay 700ms
+        */
+
+        await printOneItem(
+          item
+        );
+
+
+        showProgress(
+          i + 1,
+          labelItems.length
         );
 
       }
-
-
-      setFormFromItem(
-        labelItems[0]
-      );
-
-
-      setStatus(
-        "yellow",
-        "⚡ กำลังพิมพ์แบบ Batch " +
-        labelItems.length +
-        " ใบ..."
-      );
-
-
-      showProgress(
-        5,
-        "กำลังส่งงาน Batch ไป B21..."
-      );
-
-
-      /*
-        =====================================================
-        NATIVE PRINT BATCH
-
-        หลาย bitmap
-        แต่เป็น print job เดียว
-        =====================================================
-      */
-
-      await Niimbot.printBatch(
-        imageUrls,
-        {
-          model: MODEL,
-          size: SIZE,
-
-          onProgress:
-            function(progress) {
-
-              console.log(
-                "NIIMBOT BATCH",
-                progress
-              );
-
-
-              handleBatchProgress(
-                progress
-              );
-
-            }
-        }
-      );
-
-
-      showProgress(
-        100,
-        "พิมพ์ครบ " +
-        labelItems.length +
-        " ใบ"
-      );
 
 
       setStatus(
@@ -1167,11 +1129,15 @@
       );
 
 
-      setFormFromItem(
-        labelItems[
-          labelItems.length - 1
-        ]
-      );
+      document
+        .getElementById(
+          "progressText"
+        )
+        .textContent =
+          "เสร็จแล้ว " +
+          labelItems.length +
+          " / " +
+          labelItems.length;
 
     }
     catch (error) {
@@ -1183,8 +1149,14 @@
 
 
       showError(
-        "Batch Print ไม่สำเร็จ\n\n" +
-        errorText(error)
+        "พิมพ์ไม่สำเร็จที่ใบ " +
+        (currentIndex + 1) +
+        " / " +
+        labelItems.length +
+        "\n\n" +
+        errorText(
+          error
+        )
       );
 
     }
@@ -1200,130 +1172,44 @@
 
 
   // =========================================================
-  // BATCH PROGRESS
+  // PRINT ONE ITEM
   // =========================================================
 
-  function handleBatchProgress(
-    progress
+  async function printOneItem(
+    item
   ) {
 
-    /*
-      Driver แต่ละ version อาจส่ง progress
-      ในรูปแบบต่างกัน
-
-      เราจึงรองรับทั้ง number และ object
-    */
-
-
-    if (
-      typeof progress ===
-      "number"
-    ) {
-
-      let percent =
-        progress;
-
-
-      if (
-        percent <= 1
-      ) {
-
-        percent =
-          percent * 100;
-
-      }
-
-
-      percent =
-        Math.max(
-          0,
-          Math.min(
-            100,
-            Math.round(
-              percent
-            )
-          )
-        );
-
-
-      showProgress(
-        percent,
-        "กำลังพิมพ์ " +
-        percent +
-        "%"
+    const canvas =
+      createPrintCanvas(
+        item
       );
 
 
-      return;
-
-    }
-
-
-    if (
-      progress &&
-      typeof progress ===
-      "object"
-    ) {
-
-      let percent = null;
+    const imageUrl =
+      canvas.toDataURL(
+        "image/png"
+      );
 
 
-      if (
-        typeof progress.percent ===
-        "number"
-      ) {
+    await Niimbot.printImage(
+      imageUrl,
+      {
+        model: MODEL,
+        size: SIZE,
+        copies: 1,
+        density: 3,
 
-        percent =
-          progress.percent;
+        onProgress:
+          function(s) {
 
+            console.log(
+              "NIIMBOT",
+              s
+            );
+
+          }
       }
-      else if (
-        typeof progress.progress ===
-        "number"
-      ) {
-
-        percent =
-          progress.progress;
-
-      }
-
-
-      if (
-        percent !== null
-      ) {
-
-        if (
-          percent <= 1
-        ) {
-
-          percent =
-            percent * 100;
-
-        }
-
-
-        percent =
-          Math.max(
-            0,
-            Math.min(
-              100,
-              Math.round(
-                percent
-              )
-            )
-          );
-
-
-        showProgress(
-          percent,
-          "กำลังพิมพ์ " +
-          percent +
-          "%"
-        );
-
-      }
-
-    }
+    );
 
   }
 
@@ -1409,27 +1295,6 @@
 
 
     return true;
-
-  }
-
-
-  // =========================================================
-  // CREATE IMAGE URL
-  // =========================================================
-
-  function createImageUrl(
-    item
-  ) {
-
-    const canvas =
-      createPrintCanvas(
-        item
-      );
-
-
-    return canvas.toDataURL(
-      "image/png"
-    );
 
   }
 
@@ -1589,9 +1454,7 @@
       "middle";
 
 
-    // -------------------------------------------------------
-    // PRODUCT NAME
-    // -------------------------------------------------------
+    // PRODUCT
 
     let productFont = 44;
 
@@ -1632,9 +1495,7 @@
     );
 
 
-    // -------------------------------------------------------
     // DATE
-    // -------------------------------------------------------
 
     ctx.font =
       "bold 25px Arial, 'Noto Sans Thai', sans-serif";
@@ -1650,9 +1511,7 @@
     );
 
 
-    // -------------------------------------------------------
     // BARCODE
-    // -------------------------------------------------------
 
     if (code) {
 
@@ -1716,9 +1575,7 @@
     }
 
 
-    // -------------------------------------------------------
     // HUMAN READABLE CODE
-    // -------------------------------------------------------
 
     ctx.fillStyle =
       "#000";
@@ -1777,9 +1634,11 @@
       );
 
 
-    // -------------------------------------------------------
-    // MULTIPLE ITEMS
-    // -------------------------------------------------------
+    /*
+      MULTIPLE LABELS
+
+      ?items=JSON
+    */
 
     const rawItems =
       params.get(
@@ -1814,6 +1673,9 @@
             labelItems.length > 0
           ) {
 
+            currentIndex = 0;
+
+
             setFormFromItem(
               labelItems[0]
             );
@@ -1846,9 +1708,13 @@
     }
 
 
-    // -------------------------------------------------------
-    // SINGLE ITEM
-    // -------------------------------------------------------
+    /*
+      SINGLE LABEL
+
+      ?product=...
+      &date=...
+      &code=...
+    */
 
     const product =
       params.get(
@@ -1952,7 +1818,8 @@
     ) {
 
       const source =
-        items[i] || {};
+        items[i] ||
+        {};
 
 
       const productName =
@@ -2061,9 +1928,9 @@
 
 
       note.textContent =
-        "Native Batch • ส่ง " +
+        "Fast Print • พร้อมพิมพ์ " +
         labelItems.length +
-        " ใบเป็นงานเดียว";
+        " ใบ";
 
 
       printAll.style.display =
@@ -2122,8 +1989,17 @@
         "⏳ กำลังพิมพ์...";
 
 
-      all.textContent =
-        "⚡ กำลังพิมพ์ Batch...";
+      if (
+        labelItems.length > 1
+      ) {
+
+        all.textContent =
+          "⚡ กำลังพิมพ์ " +
+          (currentIndex + 1) +
+          " / " +
+          labelItems.length;
+
+      }
 
     }
     else {
@@ -2152,8 +2028,8 @@
   // =========================================================
 
   function showProgress(
-    percent,
-    message
+    done,
+    total
   ) {
 
     const wrap =
@@ -2178,16 +2054,14 @@
       "block";
 
 
-    percent =
-      Math.max(
-        0,
-        Math.min(
-          100,
-          Number(
-            percent
-          ) || 0
-        )
-      );
+    const percent =
+      total > 0
+        ? Math.round(
+            done /
+            total *
+            100
+          )
+        : 0;
 
 
     bar.style.width =
@@ -2196,13 +2070,9 @@
 
 
     text.textContent =
-      message ||
-      (
-        Math.round(
-          percent
-        ) +
-        "%"
-      );
+      done +
+      " / " +
+      total;
 
   }
 
