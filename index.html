@@ -62,6 +62,7 @@
       border-radius: 12px;
       text-align: center;
       font-weight: bold;
+      line-height: 1.5;
     }
 
     .red {
@@ -103,6 +104,11 @@
 
     .print {
       background: #111;
+      color: #fff;
+    }
+
+    .print-all {
+      background: #047857;
       color: #fff;
     }
 
@@ -179,6 +185,62 @@
       word-break: break-word;
     }
 
+    .batch-box {
+      display: none;
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+    }
+
+    .batch-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .batch-count {
+      font-size: 30px;
+      font-weight: bold;
+      text-align: center;
+      margin: 8px 0;
+    }
+
+    .batch-note {
+      text-align: center;
+      color: #64748b;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .progress-wrap {
+      display: none;
+      margin-top: 14px;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 14px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: #047857;
+      transition: width .25s ease;
+    }
+
+    .progress-text {
+      margin-top: 8px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
     #barcodeCanvas {
       display: none;
     }
@@ -189,7 +251,10 @@
 
 <div class="container">
 
-  <!-- CONNECTION -->
+  <!-- =====================================================
+       CONNECTION
+       ===================================================== -->
+
   <div class="card">
 
     <h1>🖨 NIIMBOT B21</h1>
@@ -228,7 +293,10 @@
   </div>
 
 
-  <!-- LABEL DATA -->
+  <!-- =====================================================
+       LABEL DATA
+       ===================================================== -->
+
   <div class="card">
 
     <label>
@@ -239,7 +307,7 @@
       id="product"
       type="text"
       value="ชาไทย"
-      oninput="drawPreview()"
+      oninput="manualDataChanged()"
     >
 
 
@@ -250,7 +318,7 @@
     <input
       id="mfgDate"
       type="date"
-      onchange="drawPreview()"
+      onchange="manualDataChanged()"
     >
 
 
@@ -262,7 +330,7 @@
       id="code"
       type="text"
       value="QR-20261004-0001"
-      oninput="drawPreview()"
+      oninput="manualDataChanged()"
     >
 
 
@@ -273,13 +341,46 @@
       🔄 อัปเดตตัวอย่าง
     </button>
 
+    <!-- BATCH INFO -->
+
+    <div
+      id="batchBox"
+      class="batch-box"
+    >
+
+      <div class="batch-title">
+        📦 รายการจากระบบผลิต
+      </div>
+
+      <div
+        id="batchCount"
+        class="batch-count"
+      >
+        0 ใบ
+      </div>
+
+      <div
+        id="batchNote"
+        class="batch-note"
+      >
+        พร้อมสำหรับพิมพ์หลายใบ
+      </div>
+
+    </div>
+
   </div>
 
 
-  <!-- PREVIEW -->
+  <!-- =====================================================
+       PREVIEW
+       ===================================================== -->
+
   <div class="card">
 
-    <div class="preview-title">
+    <div
+      id="previewTitle"
+      class="preview-title"
+    >
       ตัวอย่างฉลาก
     </div>
 
@@ -300,29 +401,70 @@
     <button
       id="printBtn"
       class="print"
-      onclick="printLabel()"
+      onclick="printCurrentLabel()"
       disabled
     >
-      🖨 พิมพ์ทดสอบ 1 ใบ
+      🖨 พิมพ์ใบนี้
     </button>
+
+    <button
+      id="printAllBtn"
+      class="print-all"
+      onclick="printAllLabels()"
+      disabled
+      style="display:none;"
+    >
+      🖨 พิมพ์ทั้งหมด
+    </button>
+
+
+    <!-- PROGRESS -->
+
+    <div
+      id="progressWrap"
+      class="progress-wrap"
+    >
+
+      <div class="progress-track">
+
+        <div
+          id="progressBar"
+          class="progress-bar"
+        ></div>
+
+      </div>
+
+      <div
+        id="progressText"
+        class="progress-text"
+      >
+        0 / 0
+      </div>
+
+    </div>
 
   </div>
 
 </div>
 
 
-<!-- Barcode work canvas -->
+<!-- =====================================================
+     BARCODE WORK CANVAS
+     ===================================================== -->
+
 <canvas
   id="barcodeCanvas"
   width="700"
-  height="120"
+  height="140"
 ></canvas>
 
 
 <script>
 
   // =========================================================
-  // B21 STARTING CONFIG
+  // B21 CONFIG
+  //
+  // ส่วนนี้คงค่าจากเวอร์ชันที่ทดสอบพิมพ์จริงสำเร็จ
   // =========================================================
 
   const MODEL = {
@@ -334,14 +476,6 @@
     speed: 1
   };
 
-  /*
-    50 × 30 mm @ 203 dpi
-
-    B1 family uses 384 printable pixels across the head
-    30 mm feed direction ≈ 240 px.
-
-    B21 is being tested against the same b1 family geometry.
-  */
 
   const SIZE = {
     w_px: 384,
@@ -350,7 +484,30 @@
   };
 
 
+  // =========================================================
+  // GLOBAL
+  // =========================================================
+
   let connected = false;
+
+  let printing = false;
+
+  /*
+    รายการฉลากทั้งหมด
+
+    รูปแบบ:
+
+    {
+      productName: "ชาไทย",
+      mfgDate: "2026-10-04",
+      qrCode: "QR-20261004-0001",
+      quantity: 1
+    }
+  */
+
+  let labelItems = [];
+
+  let currentIndex = 0;
 
 
   // =========================================================
@@ -369,6 +526,8 @@
 
       checkEnvironment();
 
+      updateBatchUI();
+
     }
   );
 
@@ -380,23 +539,31 @@
   function checkEnvironment() {
 
     const info =
-      document.getElementById("printerInfo");
+      document.getElementById(
+        "printerInfo"
+      );
 
 
-    if (typeof Niimbot === "undefined") {
+    if (
+      typeof Niimbot === "undefined"
+    ) {
 
       info.innerHTML =
         "❌ โหลด NIIMBOT Driver ไม่สำเร็จ";
 
       showError(
-        "ไม่สามารถโหลด niimbot.js ได้\nกรุณาตรวจสอบอินเทอร์เน็ต"
+        "ไม่สามารถโหลด niimbot.js ได้\n" +
+        "กรุณาตรวจสอบอินเทอร์เน็ต"
       );
 
       return;
+
     }
 
 
-    if (!window.isSecureContext) {
+    if (
+      !window.isSecureContext
+    ) {
 
       info.innerHTML =
         "❌ หน้าเว็บไม่ได้ทำงานผ่าน HTTPS";
@@ -406,10 +573,13 @@
       );
 
       return;
+
     }
 
 
-    if (!navigator.bluetooth) {
+    if (
+      !navigator.bluetooth
+    ) {
 
       info.innerHTML =
         "❌ Browser นี้ไม่มี Web Bluetooth";
@@ -417,10 +587,11 @@
       showError(
         "ไม่พบ navigator.bluetooth\n\n" +
         "Android: เปิดหน้านี้ด้วย Chrome โดยตรง\n" +
-        "อย่าเปิดจาก WebView ภายใน LINE/Facebook/แอปอื่น"
+        "อย่าเปิดจาก LINE / Facebook / WebView"
       );
 
       return;
+
     }
 
 
@@ -430,7 +601,8 @@
       "Driver: " +
       escapeHtml(
         String(
-          Niimbot.VERSION || "loaded"
+          Niimbot.VERSION ||
+          "loaded"
         )
       );
 
@@ -446,23 +618,40 @@
     clearError();
 
 
-    if (typeof Niimbot === "undefined") {
+    if (
+      typeof Niimbot === "undefined"
+    ) {
 
       showError(
         "NIIMBOT Driver ยังไม่ถูกโหลด"
       );
 
       return;
+
     }
 
 
-    if (!navigator.bluetooth) {
+    if (
+      !navigator.bluetooth
+    ) {
 
       showError(
         "Browser นี้ไม่รองรับ Web Bluetooth"
       );
 
       return;
+
+    }
+
+
+    if (printing) {
+
+      showError(
+        "กำลังพิมพ์อยู่ กรุณารอให้พิมพ์เสร็จก่อน"
+      );
+
+      return;
+
     }
 
 
@@ -473,27 +662,26 @@
 
 
     document
-      .getElementById("connectBtn")
+      .getElementById(
+        "connectBtn"
+      )
       .disabled = true;
 
 
     try {
 
       /*
-        identify() จะเปิด Bluetooth chooser
-        ต้องเรียกจากการกดปุ่มของผู้ใช้
+        ต้องเกิดจากการกดปุ่มโดยผู้ใช้
+        เพื่อให้ Chrome เปิด Bluetooth chooser
       */
 
       const result =
-        await Niimbot.identify(MODEL);
+        await Niimbot.identify(
+          MODEL
+        );
 
 
       connected = true;
-
-
-      document
-        .getElementById("printBtn")
-        .disabled = false;
 
 
       setStatus(
@@ -503,7 +691,9 @@
 
 
       document
-        .getElementById("connectBtn")
+        .getElementById(
+          "connectBtn"
+        )
         .textContent =
           "🔄 เชื่อมต่อใหม่";
 
@@ -512,15 +702,13 @@
         result
       );
 
+
+      updatePrintButtons();
+
     }
     catch (error) {
 
       connected = false;
-
-
-      document
-        .getElementById("printBtn")
-        .disabled = true;
 
 
       setStatus(
@@ -533,11 +721,16 @@
         errorText(error)
       );
 
+
+      updatePrintButtons();
+
     }
     finally {
 
       document
-        .getElementById("connectBtn")
+        .getElementById(
+          "connectBtn"
+        )
         .disabled = false;
 
     }
@@ -549,10 +742,14 @@
   // PRINTER INFO
   // =========================================================
 
-  function showPrinterInfo(result) {
+  function showPrinterInfo(
+    result
+  ) {
 
     const detected =
-      Niimbot.printer || result || {};
+      Niimbot.printer ||
+      result ||
+      {};
 
 
     const modelId =
@@ -568,43 +765,159 @@
 
 
     const task =
-      detected.task || "-";
+      detected.task ||
+      "-";
 
 
     const dpi =
-      detected.dpi || "-";
+      detected.dpi ||
+      "-";
 
 
     document
-      .getElementById("printerInfo")
+      .getElementById(
+        "printerInfo"
+      )
       .innerHTML =
 
         "✅ Bluetooth เชื่อมต่อแล้ว" +
 
         "<br>Model ID: <b>" +
-        escapeHtml(String(modelId)) +
+        escapeHtml(
+          String(modelId)
+        ) +
         "</b>" +
 
         "<br>Protocol: <b>" +
-        escapeHtml(String(protocol)) +
+        escapeHtml(
+          String(protocol)
+        ) +
         "</b>" +
 
         "<br>Task: <b>" +
-        escapeHtml(String(task)) +
+        escapeHtml(
+          String(task)
+        ) +
         "</b>" +
 
         "<br>DPI: <b>" +
-        escapeHtml(String(dpi)) +
+        escapeHtml(
+          String(dpi)
+        ) +
         "</b>";
 
   }
 
 
   // =========================================================
-  // PRINT
+  // MANUAL DATA
   // =========================================================
 
-  async function printLabel() {
+  function manualDataChanged() {
+
+    /*
+      ถ้าผู้ใช้แก้ข้อมูลเอง
+      preview จะใช้ค่าจาก input
+    */
+
+    drawPreview();
+
+  }
+
+
+  // =========================================================
+  // GET CURRENT INPUT DATA
+  // =========================================================
+
+  function getCurrentInputItem() {
+
+    return {
+
+      productName:
+        document
+          .getElementById(
+            "product"
+          )
+          .value
+          .trim(),
+
+      mfgDate:
+        document
+          .getElementById(
+            "mfgDate"
+          )
+          .value,
+
+      qrCode:
+        document
+          .getElementById(
+            "code"
+          )
+          .value
+          .trim(),
+
+      quantity: 1
+
+    };
+
+  }
+
+
+  // =========================================================
+  // SET FORM FROM ITEM
+  // =========================================================
+
+  function setFormFromItem(
+    item
+  ) {
+
+    if (!item) {
+      return;
+    }
+
+
+    document
+      .getElementById(
+        "product"
+      )
+      .value =
+        item.productName ||
+        item.product ||
+        "";
+
+
+    document
+      .getElementById(
+        "mfgDate"
+      )
+      .value =
+        normalizeDate(
+          item.mfgDate ||
+          item.date ||
+          ""
+        );
+
+
+    document
+      .getElementById(
+        "code"
+      )
+      .value =
+        item.qrCode ||
+        item.code ||
+        "";
+
+
+    drawPreview();
+
+  }
+
+
+  // =========================================================
+  // PRINT CURRENT LABEL
+  // =========================================================
+
+  async function printCurrentLabel() {
 
     clearError();
 
@@ -616,34 +929,37 @@
       );
 
       return;
+
     }
 
 
-    const code =
-      document
-        .getElementById("code")
-        .value
-        .trim();
-
-
-    if (!code) {
+    if (printing) {
 
       showError(
-        "กรุณาระบุรหัสสินค้า"
+        "กำลังพิมพ์อยู่ กรุณารอสักครู่"
       );
 
       return;
+
     }
 
 
-    const printCanvas =
-      createPrintCanvas();
+    const item =
+      getCurrentInputItem();
 
 
-    const imageUrl =
-      printCanvas.toDataURL(
-        "image/png"
-      );
+    if (
+      !validateItem(item)
+    ) {
+
+      return;
+
+    }
+
+
+    printing = true;
+
+    updatePrintButtons();
 
 
     setStatus(
@@ -652,30 +968,10 @@
     );
 
 
-    document
-      .getElementById("printBtn")
-      .disabled = true;
-
-
     try {
 
-      await Niimbot.printImage(
-        imageUrl,
-        {
-          model: MODEL,
-          size: SIZE,
-          copies: 1,
-          density: 3,
-
-          onProgress: function(s) {
-
-            console.log(
-              "NIIMBOT",
-              s
-            );
-
-          }
-        }
+      await printOneItem(
+        item
       );
 
 
@@ -701,11 +997,333 @@
     }
     finally {
 
-      document
-        .getElementById("printBtn")
-        .disabled = false;
+      printing = false;
+
+      updatePrintButtons();
 
     }
+
+  }
+
+
+  // =========================================================
+  // PRINT ALL LABELS
+  // =========================================================
+
+  async function printAllLabels() {
+
+    clearError();
+
+
+    if (!connected) {
+
+      showError(
+        "กรุณาเชื่อมต่อ B21 ก่อน"
+      );
+
+      return;
+
+    }
+
+
+    if (printing) {
+
+      return;
+
+    }
+
+
+    if (
+      !labelItems ||
+      labelItems.length === 0
+    ) {
+
+      /*
+        ไม่มี batch
+        ให้พิมพ์ข้อมูลในหน้าปัจจุบันแทน
+      */
+
+      await printCurrentLabel();
+
+      return;
+
+    }
+
+
+    for (
+      let v = 0;
+      v < labelItems.length;
+      v++
+    ) {
+
+      if (
+        !validateItem(
+          labelItems[v],
+          false
+        )
+      ) {
+
+        showError(
+          "ข้อมูลฉลากใบที่ " +
+          (v + 1) +
+          " ไม่ครบ"
+        );
+
+        return;
+
+      }
+
+    }
+
+
+    printing = true;
+
+    currentIndex = 0;
+
+    updatePrintButtons();
+
+    showProgress(
+      0,
+      labelItems.length
+    );
+
+
+    try {
+
+      for (
+        let i = 0;
+        i < labelItems.length;
+        i++
+      ) {
+
+        currentIndex = i;
+
+
+        const item =
+          labelItems[i];
+
+
+        setFormFromItem(
+          item
+        );
+
+
+        setStatus(
+          "yellow",
+          "🟡 กำลังพิมพ์ " +
+          (i + 1) +
+          " / " +
+          labelItems.length
+        );
+
+
+        showProgress(
+          i,
+          labelItems.length
+        );
+
+
+        await printOneItem(
+          item
+        );
+
+
+        showProgress(
+          i + 1,
+          labelItems.length
+        );
+
+
+        /*
+          เว้นช่วงระหว่างฉลากเล็กน้อย
+
+          ช่วยลดการส่งคำสั่งติดกันเร็วเกินไป
+          โดยเฉพาะ Bluetooth
+        */
+
+        if (
+          i <
+          labelItems.length - 1
+        ) {
+
+          await sleep(
+            700
+          );
+
+        }
+
+      }
+
+
+      setStatus(
+        "green",
+        "✅ พิมพ์ครบ " +
+        labelItems.length +
+        " ใบแล้ว"
+      );
+
+
+      document
+        .getElementById(
+          "progressText"
+        )
+        .textContent =
+          "เสร็จแล้ว " +
+          labelItems.length +
+          " / " +
+          labelItems.length;
+
+    }
+    catch (error) {
+
+      setStatus(
+        "green",
+        "🟢 เครื่องพิมพ์เชื่อมต่ออยู่"
+      );
+
+
+      showError(
+        "พิมพ์ไม่สำเร็จที่ใบ " +
+        (currentIndex + 1) +
+        " / " +
+        labelItems.length +
+        "\n\n" +
+        errorText(error)
+      );
+
+    }
+    finally {
+
+      printing = false;
+
+      updatePrintButtons();
+
+    }
+
+  }
+
+
+  // =========================================================
+  // PRINT ONE ITEM
+  // =========================================================
+
+  async function printOneItem(
+    item
+  ) {
+
+    const printCanvas =
+      createPrintCanvas(
+        item
+      );
+
+
+    const imageUrl =
+      printCanvas.toDataURL(
+        "image/png"
+      );
+
+
+    await Niimbot.printImage(
+      imageUrl,
+      {
+        model: MODEL,
+        size: SIZE,
+        copies: 1,
+        density: 3,
+
+        onProgress:
+          function(s) {
+
+            console.log(
+              "NIIMBOT",
+              s
+            );
+
+          }
+      }
+    );
+
+  }
+
+
+  // =========================================================
+  // VALIDATE
+  // =========================================================
+
+  function validateItem(
+    item,
+    showMessage
+  ) {
+
+    if (
+      typeof showMessage ===
+      "undefined"
+    ) {
+
+      showMessage = true;
+
+    }
+
+
+    if (
+      !item ||
+      !String(
+        item.productName || ""
+      ).trim()
+    ) {
+
+      if (showMessage) {
+
+        showError(
+          "กรุณาระบุชื่อชา"
+        );
+
+      }
+
+      return false;
+
+    }
+
+
+    if (
+      !String(
+        item.mfgDate || ""
+      ).trim()
+    ) {
+
+      if (showMessage) {
+
+        showError(
+          "กรุณาระบุวันที่ผลิต"
+        );
+
+      }
+
+      return false;
+
+    }
+
+
+    if (
+      !String(
+        item.qrCode || ""
+      ).trim()
+    ) {
+
+      if (showMessage) {
+
+        showError(
+          "กรุณาระบุรหัสสินค้า"
+        );
+
+      }
+
+      return false;
+
+    }
+
+
+    return true;
 
   }
 
@@ -714,10 +1332,14 @@
   // PRINT CANVAS
   // =========================================================
 
-  function createPrintCanvas() {
+  function createPrintCanvas(
+    item
+  ) {
 
     const canvas =
-      document.createElement("canvas");
+      document.createElement(
+        "canvas"
+      );
 
 
     canvas.width =
@@ -729,7 +1351,9 @@
 
 
     const ctx =
-      canvas.getContext("2d");
+      canvas.getContext(
+        "2d"
+      );
 
 
     ctx.fillStyle =
@@ -748,6 +1372,7 @@
       ctx,
       canvas.width,
       canvas.height,
+      item,
       false
     );
 
@@ -770,7 +1395,9 @@
 
 
     const ctx =
-      canvas.getContext("2d");
+      canvas.getContext(
+        "2d"
+      );
 
 
     ctx.clearRect(
@@ -780,14 +1407,6 @@
       canvas.height
     );
 
-
-    /*
-      กระดาษจริงเป็นสีเหลือง
-      preview จึงแสดงสีเหลือง
-
-      ตอนส่งไปเครื่องพิมพ์จะใช้พื้นขาว
-      เพราะ B21 เป็น thermal monochrome
-    */
 
     ctx.fillStyle =
       "#f4d328";
@@ -801,10 +1420,15 @@
     );
 
 
+    const item =
+      getCurrentInputItem();
+
+
     drawLabel(
       ctx,
       canvas.width,
       canvas.height,
+      item,
       true
     );
 
@@ -819,27 +1443,36 @@
     ctx,
     width,
     height,
+    item,
     preview
   ) {
 
+    item =
+      item || {};
+
+
     const product =
-      document
-        .getElementById("product")
-        .value
-        .trim() || "ชาไทย";
+      String(
+        item.productName ||
+        item.product ||
+        "ชาไทย"
+      ).trim();
 
 
     const date =
-      document
-        .getElementById("mfgDate")
-        .value;
+      normalizeDate(
+        item.mfgDate ||
+        item.date ||
+        ""
+      );
 
 
     const code =
-      document
-        .getElementById("code")
-        .value
-        .trim();
+      String(
+        item.qrCode ||
+        item.code ||
+        ""
+      ).trim();
 
 
     ctx.fillStyle =
@@ -855,33 +1488,61 @@
 
 
     // -------------------------------------------------------
-    // PRODUCT
+    // PRODUCT NAME
     // -------------------------------------------------------
 
+    let productFont = 44;
+
+
+    if (
+      product.length > 18
+    ) {
+
+      productFont = 31;
+
+    }
+    else if (
+      product.length > 13
+    ) {
+
+      productFont = 35;
+
+    }
+    else if (
+      product.length > 9
+    ) {
+
+      productFont = 39;
+
+    }
+
+
     ctx.font =
-      "bold 40px Arial, sans-serif";
+      "bold " +
+      productFont +
+      "px Arial, 'Noto Sans Thai', sans-serif";
 
 
     ctx.fillText(
       product,
       width / 2,
-      35
+      34
     );
 
 
     // -------------------------------------------------------
-    // DATE
+    // PRODUCTION DATE
     // -------------------------------------------------------
 
     ctx.font =
-      "bold 23px Arial, sans-serif";
+      "bold 25px Arial, 'Noto Sans Thai', sans-serif";
 
 
     ctx.fillText(
       "ผลิต " +
       formatDate(date),
       width / 2,
-      75
+      76
     );
 
 
@@ -907,7 +1568,7 @@
             displayValue: false,
             margin: 0,
             width: 2,
-            height: 70,
+            height: 80,
             background: "#ffffff",
             lineColor: "#000000"
           }
@@ -915,11 +1576,11 @@
 
 
         /*
-          preview บนสติกเกอร์เหลือง:
-          barcode จะวาดโดยไม่สร้างกรอบตกแต่งเพิ่ม
+          Preview ใช้กระดาษเหลือง
+          จึงวางพื้นขาวใต้ barcode
+          เพื่อให้มองเหมือนตัวอย่างชัดเจน
 
-          print bitmap:
-          พื้นหลังเป็นขาวอยู่แล้ว
+          ภาพที่ส่งเข้า B21 เป็น bitmap ขาวดำ
         */
 
         if (preview) {
@@ -929,10 +1590,10 @@
 
 
           ctx.fillRect(
-            16,
-            101,
-            width - 32,
-            78
+            12,
+            96,
+            width - 24,
+            88
           );
 
         }
@@ -940,16 +1601,19 @@
 
         ctx.drawImage(
           barcodeCanvas,
-          20,
-          106,
-          width - 40,
-          67
+          15,
+          100,
+          width - 30,
+          80
         );
 
       }
-      catch (e) {
+      catch (error) {
 
-        console.error(e);
+        console.error(
+          "Barcode error",
+          error
+        );
 
       }
 
@@ -964,13 +1628,28 @@
       "#000";
 
 
-    let codeFont =
-      18;
+    let codeFont = 20;
 
 
-    if (code.length > 24) {
+    if (
+      code.length > 28
+    ) {
 
-      codeFont = 15;
+      codeFont = 14;
+
+    }
+    else if (
+      code.length > 24
+    ) {
+
+      codeFont = 16;
+
+    }
+    else if (
+      code.length > 20
+    ) {
+
+      codeFont = 18;
 
     }
 
@@ -984,7 +1663,7 @@
     ctx.fillText(
       code,
       width / 2,
-      205
+      210
     );
 
   }
@@ -995,13 +1674,32 @@
   // =========================================================
 
   /*
-    ภายหลัง Google Apps Script จะเปิด URL เช่น:
+    รองรับแบบเดิม:
 
     ?product=ชาไทย
     &date=2026-10-04
     &code=QR-20261004-0001
 
-    หน้า printer จะกรอกข้อมูลให้เอง
+
+    รองรับหลายใบ:
+
+    ?items=<JSON ที่ encodeURIComponent แล้ว>
+
+
+    ตัวอย่างข้อมูลก่อน encode:
+
+    [
+      {
+        "productName":"ชาไทย",
+        "mfgDate":"2026-10-04",
+        "qrCode":"QR-001"
+      },
+      {
+        "productName":"ชาไทย",
+        "mfgDate":"2026-10-04",
+        "qrCode":"QR-002"
+      }
+    ]
   */
 
   function readUrlParameters() {
@@ -1012,23 +1710,104 @@
       );
 
 
+    // -------------------------------------------------------
+    // MULTIPLE ITEMS
+    // -------------------------------------------------------
+
+    const rawItems =
+      params.get(
+        "items"
+      );
+
+
+    if (rawItems) {
+
+      try {
+
+        const parsed =
+          JSON.parse(
+            rawItems
+          );
+
+
+        if (
+          Array.isArray(parsed) &&
+          parsed.length > 0
+        ) {
+
+          labelItems =
+            normalizeItems(
+              parsed
+            );
+
+
+          if (
+            labelItems.length > 0
+          ) {
+
+            currentIndex = 0;
+
+
+            setFormFromItem(
+              labelItems[0]
+            );
+
+
+            return;
+
+          }
+
+        }
+
+      }
+      catch (error) {
+
+        console.error(
+          "items parameter error",
+          error
+        );
+
+
+        showError(
+          "อ่านรายการฉลากจากระบบไม่สำเร็จ\n\n" +
+          errorText(error)
+        );
+
+      }
+
+    }
+
+
+    // -------------------------------------------------------
+    // SINGLE ITEM
+    // -------------------------------------------------------
+
     const product =
-      params.get("product");
+      params.get(
+        "product"
+      );
 
 
     const date =
-      params.get("date");
+      params.get(
+        "date"
+      );
 
 
     const code =
-      params.get("code");
+      params.get(
+        "code"
+      );
 
 
     if (product) {
 
       document
-        .getElementById("product")
-        .value = product;
+        .getElementById(
+          "product"
+        )
+        .value =
+          product;
 
     }
 
@@ -1036,8 +1815,13 @@
     if (date) {
 
       document
-        .getElementById("mfgDate")
-        .value = normalizeDate(date);
+        .getElementById(
+          "mfgDate"
+        )
+        .value =
+          normalizeDate(
+            date
+          );
 
     }
 
@@ -1045,10 +1829,323 @@
     if (code) {
 
       document
-        .getElementById("code")
-        .value = code;
+        .getElementById(
+          "code"
+        )
+        .value =
+          code;
 
     }
+
+
+    /*
+      ถ้ามี URL แบบ single item
+      ให้เก็บเป็น 1 item ด้วย
+
+      แต่ไม่แสดงปุ่ม "พิมพ์ทั้งหมด"
+      เพราะมีเพียงใบเดียว
+    */
+
+    if (
+      product &&
+      date &&
+      code
+    ) {
+
+      labelItems = [
+        {
+          productName:
+            product,
+
+          mfgDate:
+            normalizeDate(
+              date
+            ),
+
+          qrCode:
+            code,
+
+          quantity: 1
+        }
+      ];
+
+    }
+
+  }
+
+
+  // =========================================================
+  // NORMALIZE ITEMS
+  // =========================================================
+
+  function normalizeItems(
+    items
+  ) {
+
+    const result = [];
+
+
+    for (
+      let i = 0;
+      i < items.length;
+      i++
+    ) {
+
+      const source =
+        items[i] || {};
+
+
+      const productName =
+        String(
+          source.productName ||
+          source.product ||
+          ""
+        ).trim();
+
+
+      const mfgDate =
+        normalizeDate(
+          source.mfgDate ||
+          source.date ||
+          ""
+        );
+
+
+      const qrCode =
+        String(
+          source.qrCode ||
+          source.code ||
+          ""
+        ).trim();
+
+
+      const quantity =
+        Number(
+          source.quantity
+        ) || 1;
+
+
+      if (
+        productName &&
+        mfgDate &&
+        qrCode
+      ) {
+
+        result.push(
+          {
+            productName:
+              productName,
+
+            mfgDate:
+              mfgDate,
+
+            qrCode:
+              qrCode,
+
+            quantity:
+              quantity
+          }
+        );
+
+      }
+
+    }
+
+
+    return result;
+
+  }
+
+
+  // =========================================================
+  // BATCH UI
+  // =========================================================
+
+  function updateBatchUI() {
+
+    const box =
+      document.getElementById(
+        "batchBox"
+      );
+
+
+    const count =
+      document.getElementById(
+        "batchCount"
+      );
+
+
+    const note =
+      document.getElementById(
+        "batchNote"
+      );
+
+
+    const printAll =
+      document.getElementById(
+        "printAllBtn"
+      );
+
+
+    if (
+      labelItems.length > 1
+    ) {
+
+      box.style.display =
+        "block";
+
+
+      count.textContent =
+        labelItems.length +
+        " ใบ";
+
+
+      note.textContent =
+        "กด “พิมพ์ทั้งหมด” เพื่อพิมพ์ต่อเนื่อง " +
+        labelItems.length +
+        " ใบ";
+
+
+      printAll.style.display =
+        "block";
+
+    }
+    else {
+
+      box.style.display =
+        "none";
+
+
+      printAll.style.display =
+        "none";
+
+    }
+
+
+    updatePrintButtons();
+
+  }
+
+
+  // =========================================================
+  // PRINT BUTTONS
+  // =========================================================
+
+  function updatePrintButtons() {
+
+    const single =
+      document.getElementById(
+        "printBtn"
+      );
+
+
+    const all =
+      document.getElementById(
+        "printAllBtn"
+      );
+
+
+    single.disabled =
+      !connected ||
+      printing;
+
+
+    all.disabled =
+      !connected ||
+      printing ||
+      labelItems.length <= 1;
+
+
+    if (printing) {
+
+      single.textContent =
+        "⏳ กำลังพิมพ์...";
+
+
+      if (
+        labelItems.length > 1
+      ) {
+
+        all.textContent =
+          "⏳ กำลังพิมพ์ " +
+          (currentIndex + 1) +
+          " / " +
+          labelItems.length;
+
+      }
+
+    }
+    else {
+
+      single.textContent =
+        "🖨 พิมพ์ใบนี้";
+
+
+      all.textContent =
+        "🖨 พิมพ์ทั้งหมด " +
+        (
+          labelItems.length > 1
+            ? "(" +
+              labelItems.length +
+              " ใบ)"
+            : ""
+        );
+
+    }
+
+  }
+
+
+  // =========================================================
+  // PROGRESS
+  // =========================================================
+
+  function showProgress(
+    done,
+    total
+  ) {
+
+    const wrap =
+      document.getElementById(
+        "progressWrap"
+      );
+
+
+    const bar =
+      document.getElementById(
+        "progressBar"
+      );
+
+
+    const text =
+      document.getElementById(
+        "progressText"
+      );
+
+
+    wrap.style.display =
+      "block";
+
+
+    const percent =
+      total > 0
+        ? Math.round(
+            done /
+            total *
+            100
+          )
+        : 0;
+
+
+    bar.style.width =
+      percent +
+      "%";
+
+
+    text.textContent =
+      done +
+      " / " +
+      total;
 
   }
 
@@ -1070,17 +2167,25 @@
     const mm =
       String(
         now.getMonth() + 1
-      ).padStart(2, "0");
+      ).padStart(
+        2,
+        "0"
+      );
 
 
     const dd =
       String(
         now.getDate()
-      ).padStart(2, "0");
+      ).padStart(
+        2,
+        "0"
+      );
 
 
     document
-      .getElementById("mfgDate")
+      .getElementById(
+        "mfgDate"
+      )
       .value =
         yyyy +
         "-" +
@@ -1095,15 +2200,25 @@
   // NORMALIZE DATE
   // =========================================================
 
-  function normalizeDate(value) {
+  function normalizeDate(
+    value
+  ) {
 
     if (!value) {
+
       return "";
+
     }
 
 
+    value =
+      String(
+        value
+      ).trim();
+
+
     let match =
-      String(value).match(
+      value.match(
         /^(\d{4})-(\d{2})-(\d{2})$/
       );
 
@@ -1116,7 +2231,7 @@
 
 
     match =
-      String(value).match(
+      value.match(
         /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/
       );
 
@@ -1126,9 +2241,19 @@
       return (
         match[3] +
         "-" +
-        String(match[2]).padStart(2,"0") +
+        String(
+          match[2]
+        ).padStart(
+          2,
+          "0"
+        ) +
         "-" +
-        String(match[1]).padStart(2,"0")
+        String(
+          match[1]
+        ).padStart(
+          2,
+          "0"
+        )
       );
 
     }
@@ -1143,21 +2268,29 @@
   // DISPLAY DATE
   // =========================================================
 
-  function formatDate(value) {
+  function formatDate(
+    value
+  ) {
 
     if (!value) {
+
       return "";
+
     }
 
 
     const match =
-      String(value).match(
+      String(
+        value
+      ).match(
         /^(\d{4})-(\d{2})-(\d{2})$/
       );
 
 
     if (!match) {
+
       return value;
+
     }
 
 
@@ -1202,7 +2335,9 @@
   // ERROR
   // =========================================================
 
-  function showError(message) {
+  function showError(
+    message
+  ) {
 
     const box =
       document.getElementById(
@@ -1242,7 +2377,9 @@
   // ERROR TEXT
   // =========================================================
 
-  function errorText(error) {
+  function errorText(
+    error
+  ) {
 
     if (!error) {
 
@@ -1251,14 +2388,40 @@
     }
 
 
-    if (error.message) {
+    if (
+      error.message
+    ) {
 
       return error.message;
 
     }
 
 
-    return String(error);
+    return String(
+      error
+    );
+
+  }
+
+
+  // =========================================================
+  // SLEEP
+  // =========================================================
+
+  function sleep(
+    milliseconds
+  ) {
+
+    return new Promise(
+      function(resolve) {
+
+        setTimeout(
+          resolve,
+          milliseconds
+        );
+
+      }
+    );
 
   }
 
@@ -1267,14 +2430,33 @@
   // ESCAPE HTML
   // =========================================================
 
-  function escapeHtml(value) {
+  function escapeHtml(
+    value
+  ) {
 
-    return String(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+    return String(
+      value
+    )
+      .replace(
+        /&/g,
+        "&amp;"
+      )
+      .replace(
+        /</g,
+        "&lt;"
+      )
+      .replace(
+        />/g,
+        "&gt;"
+      )
+      .replace(
+        /"/g,
+        "&quot;"
+      )
+      .replace(
+        /'/g,
+        "&#039;"
+      );
 
   }
 
