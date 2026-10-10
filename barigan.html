@@ -49,11 +49,11 @@ function formatDisplayDate(value) {
     ctx.fillStyle = '#000';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    var productFont = product.length > 18 ? 31 : product.length > 13 ? 35 : product.length > 9 ? 39 : 44;
+    var productFont = product.length > 18 ? 31 : product.length > 13 ? 35 : product.length > 9 ? 38 : 40;
     ctx.font = "bold " + productFont + "px Arial, 'Noto Sans Thai', sans-serif";
-    ctx.fillText(product, canvas.width / 2, 34);
+    ctx.fillText(product, canvas.width / 2, 44);
     ctx.font = "bold 25px Arial, 'Noto Sans Thai', sans-serif";
-    ctx.fillText('ผลิต ' + formatDisplayDate(item.mfgDate || item.date || ''), canvas.width / 2, 76);
+    ctx.fillText('ผลิต ' + formatDisplayDate(item.mfgDate || item.date || ''), canvas.width / 2, 84);
     if (code) {
       var barcode = document.createElement('canvas');
       JsBarcode(barcode, code, {
@@ -61,10 +61,10 @@ function formatDisplayDate(value) {
         height: 80, background: '#ffffff', lineColor: '#000000'
       });
       ctx.fillStyle = '#fff';
-      ctx.fillRect(12, 96, canvas.width - 24, 88);
+      ctx.fillRect(12, 104, canvas.width - 24, 80);
       // Leave roughly 4 mm of blank space on both sides.
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(barcode, 32, 100, canvas.width - 64, 80);
+      ctx.drawImage(barcode, 32, 108, canvas.width - 64, 72);
     }
     ctx.fillStyle = '#000';
     var codeFont = code.length > 28 ? 14 : code.length > 24 ? 16 : code.length > 20 ? 18 : 20;
