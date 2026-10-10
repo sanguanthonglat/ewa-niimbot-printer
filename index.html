@@ -17,430 +17,34 @@
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      padding: 18px;
-      background: #f3f4f6;
-      color: #111;
-      font-family: Arial, "Noto Sans Thai", sans-serif;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 520px;
-      margin: 0 auto;
-    }
-
-    .card {
-      background: #fff;
-      border-radius: 20px;
-      padding: 20px;
-      margin-bottom: 16px;
-      box-shadow: 0 4px 18px rgba(0,0,0,.08);
-    }
-
-    h1 {
-      margin: 0;
-      text-align: center;
-      font-size: 27px;
-    }
-
-    .subtitle {
-      margin-top: 6px;
-      text-align: center;
-      color: #666;
-      font-size: 14px;
-    }
-
-    .status {
-      margin-top: 18px;
-      padding: 14px;
-      border-radius: 12px;
-      text-align: center;
-      font-weight: bold;
-      line-height: 1.5;
-    }
-
-    .red {
-      background: #ffe4e6;
-      color: #b91c1c;
-    }
-
-    .green {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .yellow {
-      background: #fef3c7;
-      color: #92400e;
-    }
-
-    button {
-      width: 100%;
-      min-height: 54px;
-      margin-top: 12px;
-      padding: 13px;
-      border: 0;
-      border-radius: 13px;
-      font-size: 17px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: .45;
-      cursor: not-allowed;
-    }
-
-    .connect {
-      background: #1267d6;
-      color: #fff;
-    }
-
-    .print {
-      background: #111;
-      color: #fff;
-    }
-
-    .print-all {
-      background: #047857;
-      color: #fff;
-    }
-
-    .preview-btn {
-      background: #e5e7eb;
-      color: #111;
-    }
-
-    label {
-      display: block;
-      margin-top: 15px;
-      margin-bottom: 6px;
-      font-weight: bold;
-    }
-
-    input {
-      width: 100%;
-      height: 50px;
-      padding: 0 13px;
-      border: 1px solid #ccc;
-      border-radius: 11px;
-      font-size: 17px;
-      background: #fff;
-    }
-
-    .preview-title {
-      text-align: center;
-      font-weight: bold;
-      margin-bottom: 12px;
-    }
-
-    .preview-wrap {
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      overflow: auto;
-    }
-
-    #previewCanvas {
-      width: 400px;
-      height: 240px;
-      max-width: 100%;
-      background: #f4d328;
-      border: 1px solid #999;
-    }
-
-    .size {
-      margin-top: 8px;
-      text-align: center;
-      color: #666;
-      font-size: 13px;
-    }
-
-    .printer-info {
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 10px;
-      background: #eff6ff;
-      font-size: 13px;
-      line-height: 1.6;
-      word-break: break-word;
-    }
-
-    .error {
-      display: none;
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 10px;
-      background: #fee2e2;
-      color: #991b1b;
-      font-size: 14px;
-      line-height: 1.5;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    .batch-box {
-      display: none;
-      margin-top: 14px;
-      padding: 14px;
-      border-radius: 14px;
-      background: #f8fafc;
-      border: 1px solid #e5e7eb;
-    }
-
-    .batch-title {
-      font-size: 16px;
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-
-    .batch-count {
-      font-size: 30px;
-      font-weight: bold;
-      text-align: center;
-      margin: 8px 0;
-    }
-
-    .batch-note {
-      text-align: center;
-      color: #64748b;
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .progress-wrap {
-      display: none;
-      margin-top: 14px;
-    }
-
-    .progress-track {
-      width: 100%;
-      height: 14px;
-      background: #e5e7eb;
-      border-radius: 999px;
-      overflow: hidden;
-    }
-
-    .progress-bar {
-      width: 0%;
-      height: 100%;
-      background: #047857;
-      transition: width .15s ease;
-    }
-
-    .progress-text {
-      margin-top: 8px;
-      text-align: center;
-      font-weight: bold;
-      font-size: 14px;
-    }
-
-    #barcodeCanvas {
-      display: none;
-    }
-  </style>
+*{box-sizing:border-box}body{margin:0;padding:18px;background:#f3f4f6;color:#111;font-family:Arial,"Noto Sans Thai",sans-serif}main{width:100%;max-width:520px;margin:0 auto}.card{background:#fff;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 4px 18px #00000014}h1{margin:0;text-align:center;font-size:27px}.subtitle{margin-top:6px;text-align:center;color:#666;font-size:14px}.status{margin-top:18px;padding:14px;border-radius:12px;text-align:center;font-weight:bold;line-height:1.5}.red{background:#ffe4e6;color:#b91c1c}.green{background:#dcfce7;color:#166534}.yellow{background:#fef3c7;color:#92400e}button{width:100%;min-height:54px;margin-top:12px;padding:13px;border:0;border-radius:13px;font-size:17px;font-weight:bold;cursor:pointer;color:#fff;background:#1267d6}button:disabled{opacity:.45;cursor:not-allowed}.secondary{background:#111}#print{background:#047857}#summary{text-align:center;color:#64748b;font-size:14px;line-height:1.6}#status{white-space:pre-wrap;line-height:1.6;font-size:14px;overflow-wrap:anywhere}#status:empty{display:none}.preview-title{text-align:center;font-weight:bold;margin-bottom:12px}canvas{display:block;width:400px;max-width:100%;height:auto;margin:12px auto;border:1px solid #999}#labels:empty::after{content:"ยังไม่มีรายการสติ๊กเกอร์";display:block;text-align:center;color:#64748b;padding:24px 0}.size{text-align:center;color:#666;font-size:13px}.progress-track{height:12px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin:12px 0}.progress-bar{height:100%;width:0;background:#047857;transition:width .2s}@media(max-width:360px){body{padding:12px}.card{padding:16px}h1{font-size:24px}}
+.edit-label{display:block;margin:15px 0 6px;font-weight:bold}.edit-input{width:100%;height:50px;padding:0 13px;border:1px solid #ccc;border-radius:11px;font:17px Arial,sans-serif;background:#fff}.preview-btn{background:#e5e7eb;color:#111}#singlePrint{background:#111}#previewError{color:#b91c1c;font-size:14px;line-height:1.5}#singlePreview:empty::after{content:"เลือกรายการสติ๊กเกอร์เพื่อดูตัวอย่าง";display:block;text-align:center;color:#64748b;padding:24px 0}
+.container{width:100%;max-width:520px;margin:0 auto}.connect{background:#1267d6}.print{background:#111}.print-all{background:#047857}.preview-wrap{display:flex;justify-content:center}#previewCanvas{width:400px;max-width:100%;height:auto}#errorBox{display:none;background:#fee2e2;color:#991b1b;border-radius:12px;padding:12px;margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere}#progressText{font-size:14px;line-height:1.6;text-align:center}#progressWrap{display:none;margin-top:14px}.batch-box{margin-top:14px;text-align:center}.batch-count{font-size:24px;font-weight:bold}.batch-note{font-size:14px;color:#64748b}.printer-info{display:none}#batchNote{display:none}
+</style>
 </head>
 
-<body>
-
-<div class="container">
-
-  <!-- CONNECTION -->
-  <div class="card">
-
-    <h1>🖨 NIIMBOT B21</h1>
-
-    <div class="subtitle">
-      เอวาชาใต้ • ฉลาก 50 × 30 mm
-    </div>
-
-    <div
-      id="status"
-      class="status red"
-    >
-      🔴 ยังไม่ได้เชื่อมต่อ
-    </div>
-
-    <button
-      id="connectBtn"
-      class="connect"
-      onclick="connectPrinter()"
-    >
-      🔵 เชื่อมต่อ B21
-    </button>
-
-    <div
-      id="printerInfo"
-      class="printer-info"
-    >
-      Browser: กำลังตรวจสอบ...
-    </div>
-
-    <div
-      id="errorBox"
-      class="error"
-    ></div>
-
-  </div>
-
-
-  <!-- LABEL DATA -->
-  <div class="card">
-
-    <label>
-      ชื่อชา
-    </label>
-
-    <input
-      id="product"
-      type="text"
-      value="ชาไทย"
-      oninput="drawPreview()"
-    >
-
-
-    <label>
-      วันที่ผลิต
-    </label>
-
-    <input
-      id="mfgDate"
-      type="date"
-      onchange="drawPreview()"
-    >
-
-
-    <label>
-      รหัสสินค้า
-    </label>
-
-    <input
-      id="code"
-      type="text"
-      value="QR-20261004-0001"
-      oninput="drawPreview()"
-    >
-
-
-    <button
-      class="preview-btn"
-      onclick="drawPreview()"
-    >
-      🔄 อัปเดตตัวอย่าง
-    </button>
-
-
-    <div
-      id="batchBox"
-      class="batch-box"
-    >
-
-      <div class="batch-title">
-        📦 รายการจากระบบผลิต
-      </div>
-
-      <div
-        id="batchCount"
-        class="batch-count"
-      >
-        0 ใบ
-      </div>
-
-      <div
-        id="batchNote"
-        class="batch-note"
-      >
-        พร้อมพิมพ์
-      </div>
-
-    </div>
-
-  </div>
-
-
-  <!-- PREVIEW -->
-  <div class="card">
-
-    <div class="preview-title">
-      ตัวอย่างฉลาก
-    </div>
-
-    <div class="preview-wrap">
-
-      <canvas
-        id="previewCanvas"
-        width="400"
-        height="240"
-      ></canvas>
-
-    </div>
-
-    <div class="size">
-      ฉลากสีเหลือง 50 × 30 mm
-    </div>
-
-    <button
-      id="printBtn"
-      class="print"
-      onclick="printCurrentLabel()"
-      disabled
-    >
-      🖨 พิมพ์ใบนี้
-    </button>
-
-    <button
-      id="printAllBtn"
-      class="print-all"
-      onclick="printAllLabels()"
-      disabled
-      style="display:none;"
-    >
-      ⚡ พิมพ์ทั้งหมด
-    </button>
-
-
-    <div
-      id="progressWrap"
-      class="progress-wrap"
-    >
-
-      <div class="progress-track">
-
-        <div
-          id="progressBar"
-          class="progress-bar"
-        ></div>
-
-      </div>
-
-      <div
-        id="progressText"
-        class="progress-text"
-      >
-        0 / 0
-      </div>
-
-    </div>
-
-  </div>
-
+<body><div class="container">
+<div class="card"><h1>เอวาชาใต้</h1><div class="subtitle">Niimbot B21 · สติ๊กเกอร์ 50 × 30 มม.</div>
+<div id="status" class="status red" role="status" aria-live="polite">● ยังไม่ได้เชื่อมต่อ</div>
+<button id="connectBtn" class="connect" onclick="connectPrinter()">เชื่อมต่อ Bluetooth</button>
+<button id="testBtn" class="print" onclick="printTestLabel()" disabled>พิมพ์ทดสอบ 1 ใบ</button>
+<button id="printAllBtn" class="print-all" onclick="printAllLabels()" disabled>พิมพ์สติ๊กเกอร์ทั้งหมด</button>
+<div id="batchBox" class="batch-box"><div id="batchCount" class="batch-count"></div><div id="batchNote"></div></div>
+<div id="progressWrap"><div class="progress-track"><div id="progressBar" class="progress-bar"></div></div><div id="progressText" role="status" aria-live="polite"></div></div>
+<div id="printerInfo" class="printer-info"></div><div id="errorBox" role="alert"></div>
 </div>
-
-
-<!-- Barcode work canvas -->
-<canvas
-  id="barcodeCanvas"
-  width="700"
-  height="140"
-></canvas>
-
-
+<div class="card"><div class="preview-title">พิมพ์ซ้ำเฉพาะใบ</div>
+<div id="itemPickerWrap" hidden><label class="edit-label" for="itemPicker">เลือกจากรายการที่ส่งมา</label><select class="edit-input" id="itemPicker" onchange="selectReprintItem()"></select></div>
+<input id="product" type="hidden" value="">
+<input id="mfgDate" type="hidden" value="">
+<input id="code" type="hidden" value="">
+<button hidden id="updatePreview" class="preview-btn" onclick="drawPreview()">อัปเดตตัวอย่าง</button>
+<div class="preview-wrap"><canvas id="previewCanvas" width="384" height="240" role="img" aria-label="ตัวอย่างสติ๊กเกอร์"></canvas></div>
+<div class="size">ขนาด 50 × 30 มม.</div>
+<button id="printBtn" class="print" onclick="printCurrentLabel()" disabled>พิมพ์ใบนี้ 1 ใบ</button>
+</div>
+<div class="card"><div class="preview-title">รายการสติ๊กเกอร์ทั้งหมด</div><div id="allPreviews"></div><div class="size">ขนาด 50 × 30 มม.</div></div>
+</div><canvas id="barcodeCanvas" style="display:none"></canvas>
 <script>
 
   // =========================================================
@@ -494,6 +98,7 @@
       checkEnvironment();
 
       updateBatchUI();
+      initReprintPicker();
 
     }
   );
@@ -1294,6 +899,10 @@
     }
 
 
+    if (!/^[\x20-\x7e]{1,100}$/.test(String(item.qrCode).trim())) {
+      if (showMessage) showError('รหัส Barcode ต้องเป็นภาษาอังกฤษหรือตัวเลข ไม่เกิน 100 ตัวอักษร');
+      return false;
+    }
     return true;
 
   }
@@ -1380,7 +989,7 @@
 
 
     ctx.fillStyle =
-      "#f4d328";
+      "#ffffff";
 
 
     ctx.fillRect(
@@ -1399,6 +1008,7 @@
       true
     );
 
+    updatePrintButtons();
   }
 
 
@@ -1915,7 +1525,7 @@
 
 
     if (
-      labelItems.length > 1
+      labelItems.length > 0
     ) {
 
       box.style.display =
@@ -1959,6 +1569,9 @@
   // =========================================================
 
   function updatePrintButtons() {
+    document.getElementById('testBtn').disabled = !connected || printing;
+    ['product','mfgDate','code','itemPicker','updatePreview','connectBtn'].forEach(id => document.getElementById(id).disabled = printing);
+
 
     const single =
       document.getElementById(
@@ -1974,13 +1587,13 @@
 
     single.disabled =
       !connected ||
-      printing;
+      printing || !validateItem(getCurrentInputItem(), false);
 
 
     all.disabled =
       !connected ||
       printing ||
-      labelItems.length <= 1;
+      labelItems.length === 0;
 
 
     if (printing) {
@@ -1990,7 +1603,7 @@
 
 
       if (
-        labelItems.length > 1
+        labelItems.length > 0
       ) {
 
         all.textContent =
@@ -2005,13 +1618,13 @@
     else {
 
       single.textContent =
-        "🖨 พิมพ์ใบนี้";
+        "พิมพ์ใบนี้ 1 ใบ";
 
 
       all.textContent =
-        "⚡ พิมพ์ทั้งหมด " +
+        "พิมพ์สติ๊กเกอร์ทั้งหมด " +
         (
-          labelItems.length > 1
+          labelItems.length > 0
             ? "(" +
               labelItems.length +
               " ใบ)"
@@ -2236,27 +1849,17 @@
   // STATUS
   // =========================================================
 
-  function setStatus(
-    type,
-    message
-  ) {
-
-    const el =
-      document.getElementById(
-        "status"
-      );
-
-
-    el.className =
-      "status " +
-      type;
-
-
-    el.textContent =
-      message;
-
+  function setStatus(type, message) {
+    const el = document.getElementById('status');
+    // Keep connection state separate from printing progress.
+    if (connected) {
+      el.className = 'status green'; el.textContent = '● เชื่อมต่อแล้ว · Bluetooth';
+      document.getElementById('progressText').textContent = message;
+    } else {
+      el.className = 'status ' + type;
+      el.textContent = type === 'yellow' ? '● กำลังเชื่อมต่อ…' : message;
+    }
   }
-
 
   // =========================================================
   // ERROR
@@ -2365,6 +1968,40 @@
 
   }
 
+
+function selectReprintItem() {
+  if (printing) return;
+  const item = labelItems[Number(document.getElementById('itemPicker').value)];
+  if (item) setFormFromItem(item);
+}
+function matchReprintCode() {
+  const code = document.getElementById('code').value.trim();
+  const index = labelItems.findIndex(item => String(item.qrCode) === code);
+  if (index >= 0) {
+    document.getElementById('itemPicker').value = String(index);
+    setFormFromItem(labelItems[index]);
+  } else drawPreview();
+}
+function initReprintPicker() {
+  const picker = document.getElementById('itemPicker'); picker.replaceChildren();
+  document.getElementById('itemPickerWrap').hidden = !labelItems.length;
+  const previews = document.getElementById('allPreviews'); previews.replaceChildren();
+  labelItems.forEach((item,index) => {
+    const option = document.createElement('option'); option.value = String(index);
+    option.textContent = (index+1)+'. '+item.qrCode+' · '+item.productName;
+    picker.appendChild(option);
+    const canvas = document.createElement('canvas'); canvas.width = SIZE.w_px; canvas.height = SIZE.h_px;
+    const ctx = canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    drawLabel(ctx,canvas.width,canvas.height,item,true); previews.appendChild(canvas);
+  });
+  if (!labelItems.length) previews.textContent = 'ยังไม่มีรายการสติ๊กเกอร์';
+}
+async function printTestLabel() {
+  if (!connected || printing) return;
+  const original = getCurrentInputItem();
+  setFormFromItem({productName:'ทดสอบชาไทย',mfgDate:new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),qrCode:'TEST12345678'});
+  try { await printCurrentLabel(); } finally { setFormFromItem(original); }
+}
 </script>
 
 </body>
