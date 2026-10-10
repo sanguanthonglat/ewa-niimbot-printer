@@ -7,6 +7,7 @@
 <label>ช่องว่างระหว่างสติ๊กเกอร์ <input id="gap" type="number" min="0" max="10" step="0.1" value="2"> มม.</label>
 <label>เลื่อนขวา <input id="offsetX" type="number" min="0" max="15" step="0.5" value="0"> มม.</label>
 <label>เลื่อนลง <input id="offsetY" type="number" min="0" max="10" step="0.5" value="0"> มม.</label>
+<label>ขนาดข้อมูลต่อครั้ง <select id="packetSize"><option value="100" selected>100 ไบต์ (เร็ว)</option><option value="20">20 ไบต์ (รองรับทั่วไป)</option><option value="180">180 ไบต์ (ทดลองเร็วขึ้น)</option></select></label>
 <label><input id="safeMode" type="checkbox"> ส่งแบบช้า (ใช้เมื่อพิมพ์ออกไม่ครบ)</label>
 <p>หากด้านซ้ายถูกตัด ให้เพิ่มค่าเลื่อนขวาครั้งละ 0.5 มม. หากด้านขวาถูกตัด ให้ลดค่านี้</p>
 <button id="test" class="secondary" onclick="testLabel()" disabled>พิมพ์ทดสอบ 1 ใบ</button>
@@ -69,7 +70,7 @@ function buttons() {
   document.getElementById('connect').disabled = busy;
   document.getElementById('test').disabled = busy || !writer;
   document.getElementById('print').disabled = busy || !writer || !items.length;
-  ['gap','offsetX','offsetY','safeMode'].forEach(id=>document.getElementById(id).disabled=busy);
+  ['gap','offsetX','offsetY','safeMode','packetSize'].forEach(id=>document.getElementById(id).disabled=busy);
 }
 async function connectPrinter() {
   if (!navigator.bluetooth) { status.textContent = 'เบราว์เซอร์นี้ไม่รองรับ Bluetooth จากเว็บ กรุณาเปิดด้วย Chrome บน Android'; return; }
@@ -98,20 +99,23 @@ function buildTsplJob(canvas, gap, offsetX=0, offsetY=0) {
     if (rgba[i]*0.299+rgba[i+1]*0.587+rgba[i+2]*0.114 < 160) bitmap[y*50+(x>>3)] &= ~(128>>(x&7));
   }
   const enc = new TextEncoder();
-  const head = enc.encode('SIZE 50 mm,30 mm\r\nGAP '+gap+' mm,0 mm\r\nDIRECTION 0\r\nREFERENCE '+Math.round(offsetX*8)+','+Math.round(offsetY*8)+'\r\nSHIFT 0\r\nCLS\r\nBITMAP 0,0,50,240,0,');
+  const head = enc.encode('SIZE 50 mm,30 mm\r\nGAP '+gap+' mm,0 mm\r\nSPEED 4\r\nDIRECTION 0\r\nREFERENCE '+Math.round(offsetX*8)+','+Math.round(offsetY*8)+'\r\nSHIFT 0\r\nCLS\r\nBITMAP 0,0,50,240,0,');
   const tail = enc.encode('\r\nPRINT 1,1\r\n');
   const job = new Uint8Array(head.length+bitmap.length+tail.length);
   job.set(head); job.set(bitmap,head.length); job.set(tail,head.length+bitmap.length); return job;
 }
 async function sendJob(job) {
-  // Small sequential packets work with the default BLE MTU; never retry a partial print automatically.
-  for (let offset=0;offset<job.length;offset+=20) {
+  // No automatic retry after a partial transfer. Safe mode uses default-MTU packets.
+  const safe=document.getElementById('safeMode').checked;
+  const selected=Number(document.getElementById('packetSize').value);
+  const packetSize=safe?20:([20,100,180].includes(selected)?selected:20);
+  for (let offset=0;offset<job.length;offset+=packetSize) {
     if (!device || !device.gatt.connected || !writer) throw new Error('Bluetooth หลุดระหว่างส่งข้อมูล');
-    const part = job.slice(offset,offset+20);
+    const part = job.slice(offset,offset+packetSize);
     const fast = !document.getElementById('safeMode').checked && writer.properties.writeWithoutResponse;
     if (fast) {
       await writer.writeValueWithoutResponse(part);
-      await new Promise(resolve=>setTimeout(resolve,2));
+      await new Promise(resolve=>setTimeout(resolve,1));
     } else if (writer.properties.write) await writer.writeValueWithResponse(part);
     else { await writer.writeValueWithoutResponse(part); await new Promise(resolve=>setTimeout(resolve,12)); }
   }
@@ -122,16 +126,18 @@ async function runPrint(batch) {
   if (!Number.isFinite(gap) || gap<0 || gap>10) { status.textContent='กรุณาระบุช่องว่างสติ๊กเกอร์ 0–10 มม.'; return; }
   const offsetX=Number(document.getElementById('offsetX').value), offsetY=Number(document.getElementById('offsetY').value);
   if (!Number.isFinite(offsetX)||offsetX<0||offsetX>15||!Number.isFinite(offsetY)||offsetY<0||offsetY>10) {status.textContent='กรุณาระบุตำแหน่งพิมพ์ในช่วงที่กำหนด';return;}
-  busy=true;buttons();let completed=0;
+  busy=true;buttons();let completed=0;const started=performance.now();
   try {
     await document.fonts.ready;
     for (const item of batch) {
       status.textContent='กำลังส่งใบที่ '+(completed+1)+' / '+batch.length+' กรุณาเปิดหน้านี้ค้างไว้';
+      const labelStarted=performance.now();
       await sendJob(buildTsplJob(createBarcodeLabel(item),gap,offsetX,offsetY));completed++;
+      status.textContent='ส่งใบที่ '+completed+' / '+batch.length+' ครบใน '+((performance.now()-labelStarted)/1000).toFixed(1)+' วินาที';
       await new Promise(resolve=>setTimeout(resolve,350));
     }
-    status.textContent='ส่งข้อมูลครบ '+completed+' ใบแล้ว กรุณาตรวจผลที่เครื่องพิมพ์';
-  } catch(error) { status.textContent='ส่งไม่ครบ: '+error.message+'\nส่งครบแล้ว '+completed+' ใบ ใบถัดไปอาจส่งไปบางส่วน ตรวจสติ๊กเกอร์ก่อนพิมพ์ซ้ำ'; }
+    status.textContent='ส่งข้อมูลครบ '+completed+' ใบ ใช้เวลารวม '+((performance.now()-started)/1000).toFixed(1)+' วินาที กรุณาตรวจผลที่เครื่องพิมพ์';
+  } catch(error) { status.textContent='ส่งไม่ครบ: '+error.message+'\nหากส่งไม่ได้หรือภาพไม่ครบ ให้เลือก 20 ไบต์ หรือเปิดส่งแบบช้า และปิดเปิดเครื่องก่อนลองใหม่\nส่งครบแล้ว '+completed+' ใบ ใบถัดไปอาจส่งไปบางส่วน ตรวจสติ๊กเกอร์ก่อนพิมพ์ซ้ำ'; }
   finally {busy=false;buttons();}
 }
 function testLabel() { return runPrint([{productName:'ทดสอบชาไทย',mfgDate:new Date().toLocaleDateString('en-GB',{timeZone:'Asia/Bangkok'}),qrCode:'TEST12345678'}]); }
