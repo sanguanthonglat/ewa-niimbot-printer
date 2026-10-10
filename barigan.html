@@ -5,6 +5,10 @@
 <section><div id="status" role="status">ยังไม่ได้เชื่อมต่อเครื่องพิมพ์</div>
 <button id="connect" onclick="connectPrinter()">เชื่อมต่อ BlueTooth Printer</button>
 <label>ช่องว่างระหว่างสติ๊กเกอร์ <input id="gap" type="number" min="0" max="10" step="0.1" value="2"> มม.</label>
+<label>เลื่อนขวา <input id="offsetX" type="number" min="0" max="15" step="0.5" value="5"> มม.</label>
+<label>เลื่อนลง <input id="offsetY" type="number" min="0" max="10" step="0.5" value="0"> มม.</label>
+<label><input id="safeMode" type="checkbox"> ส่งแบบช้า (ใช้เมื่อพิมพ์ออกไม่ครบ)</label>
+<p>หากด้านซ้ายถูกตัด ให้เพิ่มค่าเลื่อนขวาครั้งละ 0.5 มม. หากด้านขวาถูกตัด ให้ลดค่านี้</p>
 <button id="test" class="secondary" onclick="testLabel()" disabled>พิมพ์ทดสอบ 1 ใบ</button>
 <button id="print" onclick="printLabels()" disabled>พิมพ์สติ๊กเกอร์ทั้งหมด</button>
 <p>ปิดแอป Print Label และหน้าทดสอบ Bluetooth อื่นก่อนเชื่อมต่อ</p>
@@ -65,7 +69,7 @@ function buttons() {
   document.getElementById('connect').disabled = busy;
   document.getElementById('test').disabled = busy || !writer;
   document.getElementById('print').disabled = busy || !writer || !items.length;
-  document.getElementById('gap').disabled = busy;
+  ['gap','offsetX','offsetY','safeMode'].forEach(id=>document.getElementById(id).disabled=busy);
 }
 async function connectPrinter() {
   if (!navigator.bluetooth) { status.textContent = 'เบราว์เซอร์นี้ไม่รองรับ Bluetooth จากเว็บ กรุณาเปิดด้วย Chrome บน Android'; return; }
@@ -82,7 +86,7 @@ async function connectPrinter() {
   } catch (error) { writer = null; status.textContent = 'เชื่อมต่อไม่สำเร็จ: ' + error.message; }
   finally { busy = false; buttons(); }
 }
-function buildTsplJob(canvas, gap) {
+function buildTsplJob(canvas, gap, offsetX=5, offsetY=0) {
   // 203 dpi = 8 dots/mm. One label is 400 × 240 dots.
   const raster = document.createElement('canvas'); raster.width = 400; raster.height = 240;
   const ctx = raster.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,400,240);
@@ -94,7 +98,7 @@ function buildTsplJob(canvas, gap) {
     if (rgba[i]*0.299+rgba[i+1]*0.587+rgba[i+2]*0.114 < 160) bitmap[y*50+(x>>3)] &= ~(128>>(x&7));
   }
   const enc = new TextEncoder();
-  const head = enc.encode('SIZE 50 mm,30 mm\r\nGAP '+gap+' mm,0 mm\r\nDIRECTION 0\r\nREFERENCE 0,0\r\nCLS\r\nBITMAP 0,0,50,240,0,');
+  const head = enc.encode('SIZE 50 mm,30 mm\r\nGAP '+gap+' mm,0 mm\r\nDIRECTION 0\r\nREFERENCE '+Math.round(offsetX*8)+','+Math.round(offsetY*8)+'\r\nSHIFT 0\r\nCLS\r\nBITMAP 0,0,50,240,0,');
   const tail = enc.encode('\r\nPRINT 1,1\r\n');
   const job = new Uint8Array(head.length+bitmap.length+tail.length);
   job.set(head); job.set(bitmap,head.length); job.set(tail,head.length+bitmap.length); return job;
@@ -104,7 +108,11 @@ async function sendJob(job) {
   for (let offset=0;offset<job.length;offset+=20) {
     if (!device || !device.gatt.connected || !writer) throw new Error('Bluetooth หลุดระหว่างส่งข้อมูล');
     const part = job.slice(offset,offset+20);
-    if (writer.properties.write) await writer.writeValueWithResponse(part);
+    const fast = !document.getElementById('safeMode').checked && writer.properties.writeWithoutResponse;
+    if (fast) {
+      await writer.writeValueWithoutResponse(part);
+      await new Promise(resolve=>setTimeout(resolve,2));
+    } else if (writer.properties.write) await writer.writeValueWithResponse(part);
     else { await writer.writeValueWithoutResponse(part); await new Promise(resolve=>setTimeout(resolve,12)); }
   }
 }
@@ -112,12 +120,14 @@ async function runPrint(batch) {
   if (busy || !writer || !batch.length) return;
   const gap = Number(document.getElementById('gap').value);
   if (!Number.isFinite(gap) || gap<0 || gap>10) { status.textContent='กรุณาระบุช่องว่างสติ๊กเกอร์ 0–10 มม.'; return; }
+  const offsetX=Number(document.getElementById('offsetX').value), offsetY=Number(document.getElementById('offsetY').value);
+  if (!Number.isFinite(offsetX)||offsetX<0||offsetX>15||!Number.isFinite(offsetY)||offsetY<0||offsetY>10) {status.textContent='กรุณาระบุตำแหน่งพิมพ์ในช่วงที่กำหนด';return;}
   busy=true;buttons();let completed=0;
   try {
     await document.fonts.ready;
     for (const item of batch) {
       status.textContent='กำลังส่งใบที่ '+(completed+1)+' / '+batch.length+' กรุณาเปิดหน้านี้ค้างไว้';
-      await sendJob(buildTsplJob(createBarcodeLabel(item),gap));completed++;
+      await sendJob(buildTsplJob(createBarcodeLabel(item),gap,offsetX,offsetY));completed++;
       await new Promise(resolve=>setTimeout(resolve,350));
     }
     status.textContent='ส่งข้อมูลครบ '+completed+' ใบแล้ว กรุณาตรวจผลที่เครื่องพิมพ์';
