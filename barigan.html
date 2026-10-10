@@ -5,7 +5,7 @@
 <section><div id="status" role="status">ยังไม่ได้เชื่อมต่อเครื่องพิมพ์</div>
 <button id="connect" onclick="connectPrinter()">เชื่อมต่อ BlueTooth Printer</button>
 <label>ช่องว่างระหว่างสติ๊กเกอร์ <input id="gap" type="number" min="0" max="10" step="0.1" value="2"> มม.</label>
-<label>เลื่อนขวา <input id="offsetX" type="number" min="0" max="15" step="0.5" value="5"> มม.</label>
+<label>เลื่อนขวา <input id="offsetX" type="number" min="0" max="15" step="0.5" value="0"> มม.</label>
 <label>เลื่อนลง <input id="offsetY" type="number" min="0" max="10" step="0.5" value="0"> มม.</label>
 <label><input id="safeMode" type="checkbox"> ส่งแบบช้า (ใช้เมื่อพิมพ์ออกไม่ครบ)</label>
 <p>หากด้านซ้ายถูกตัด ให้เพิ่มค่าเลื่อนขวาครั้งละ 0.5 มม. หากด้านขวาถูกตัด ให้ลดค่านี้</p>
@@ -86,7 +86,7 @@ async function connectPrinter() {
   } catch (error) { writer = null; status.textContent = 'เชื่อมต่อไม่สำเร็จ: ' + error.message; }
   finally { busy = false; buttons(); }
 }
-function buildTsplJob(canvas, gap, offsetX=5, offsetY=0) {
+function buildTsplJob(canvas, gap, offsetX=0, offsetY=0) {
   // 203 dpi = 8 dots/mm. One label is 400 × 240 dots.
   const raster = document.createElement('canvas'); raster.width = 400; raster.height = 240;
   const ctx = raster.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,400,240);
