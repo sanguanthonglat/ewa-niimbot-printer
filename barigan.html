@@ -89,7 +89,9 @@ function updateConnectionStatus() {
     '● เชื่อมต่อแล้ว · ' + (transport === 'usb' ? 'USB' : 'Bluetooth') : '● ยังไม่ได้เชื่อมต่อ';
 }
 
+let pendingItemsReload = false;
 function buttons() {
+  if (!busy && pendingItemsReload) { pendingItemsReload = false; queueMicrotask(loadLabelItems); }
   updateConnectionStatus();
   document.getElementById('connect').disabled = busy;
   document.getElementById('connectUsb').disabled = busy;
@@ -291,21 +293,34 @@ function initReprint() {
 }
 function testLabel() { return runPrint([{productName:'ทดสอบชาไทย',mfgDate:new Date().toLocaleDateString('en-GB',{timeZone:'Asia/Bangkok'}),qrCode:'TEST12345678'}]); }
 function printLabels() { return runPrint(items); }
-(async function init() {
-  if (new URLSearchParams(location.search).get('mode') === 'usb') {
-    document.getElementById('connectUsb').parentNode.insertBefore(document.getElementById('connectUsb'),document.getElementById('connect'));
-    status.textContent = '';
-  }
+let itemsLoadRevision = 0;
+async function loadLabelItems() {
+  if (busy) { pendingItemsReload = true; return; }
+  const revision = ++itemsLoadRevision;
+  const labels = document.getElementById('labels');
+  items = []; labels.replaceChildren();
+  document.getElementById('singlePreview').replaceChildren();
+  document.getElementById('reprintCode').value = '';
+  buttons();
   try {
     const params = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
     const parsed = JSON.parse(params.get('items') || '[]');
     if (!Array.isArray(parsed) || parsed.length>1000 || parsed.some(item=>!item || !/^[\x20-\x7e]+$/.test(String(item.qrCode || '')) || String(item.qrCode).length>100)) throw new Error('ข้อมูล Barcode ไม่ถูกต้อง');
-    items=parsed;
-    document.getElementById('summary').textContent = items.length ? 'จำนวน '+items.length+' สติ๊กเกอร์ (1 ใบต่อ Barcode)' : 'ไม่มีรายการจากหน้าผลิต สามารถเชื่อมต่อและพิมพ์ทดสอบได้';
     await document.fonts.ready;
-    items.forEach(item=>document.getElementById('labels').appendChild(createBarcodeLabel(item)));
-  }catch(error){items=[];status.textContent='เปิดรายการไม่ได้: '+error.message;}
-  initReprint();
-  buttons();
-})();
+    if (revision !== itemsLoadRevision) return;
+    items = parsed;
+    items.forEach(item => labels.appendChild(createBarcodeLabel(item)));
+    document.getElementById('summary').textContent = items.length ? 'จำนวน '+items.length+' สติ๊กเกอร์ (1 ใบต่อ Barcode)' : 'ไม่มีรายการจากหน้าผลิต';
+    status.textContent = '';
+  } catch (error) {
+    if (revision !== itemsLoadRevision) return;
+    items = []; labels.replaceChildren(); status.textContent = 'เปิดรายการไม่ได้: ' + error.message;
+  }
+  initReprint(); buttons();
+}
+window.addEventListener('hashchange', loadLabelItems);
+if (new URLSearchParams(location.search).get('mode') === 'usb') {
+  document.getElementById('connectUsb').parentNode.insertBefore(document.getElementById('connectUsb'),document.getElementById('connect'));
+}
+loadLabelItems();
 </script></body></html>
