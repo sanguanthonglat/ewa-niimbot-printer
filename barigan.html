@@ -7,7 +7,7 @@
 <label>ช่องว่างระหว่างสติ๊กเกอร์ <input id="gap" type="number" min="0" max="10" step="0.1" value="2"> มม.</label>
 <label>เลื่อนขวา <input id="offsetX" type="number" min="0" max="15" step="0.5" value="0"> มม.</label>
 <label>เลื่อนลง <input id="offsetY" type="number" min="0" max="10" step="0.5" value="0"> มม.</label>
-<label>ขนาดข้อมูลต่อครั้ง <select id="packetSize"><option value="100" selected>100 ไบต์ (เร็ว)</option><option value="20">20 ไบต์ (รองรับทั่วไป)</option><option value="180">180 ไบต์ (ทดลองเร็วขึ้น)</option></select></label>
+<label>ขนาดข้อมูลต่อครั้ง <select id="packetSize"><option value="100" selected>100 ไบต์ (เร็ว)</option><option value="20">20 ไบต์ (รองรับทั่วไป)</option><option value="150">150 ไบต์ (ทดลองเร็วขึ้น)</option></select></label>
 <label><input id="safeMode" type="checkbox"> ส่งแบบช้า (ใช้เมื่อพิมพ์ออกไม่ครบ)</label>
 <p>หากด้านซ้ายถูกตัด ให้เพิ่มค่าเลื่อนขวาครั้งละ 0.5 มม. หากด้านขวาถูกตัด ให้ลดค่านี้</p>
 <button id="test" class="secondary" onclick="testLabel()" disabled>พิมพ์ทดสอบ 1 ใบ</button>
@@ -108,7 +108,7 @@ async function sendJob(job) {
   // No automatic retry after a partial transfer. Safe mode uses default-MTU packets.
   const safe=document.getElementById('safeMode').checked;
   const selected=Number(document.getElementById('packetSize').value);
-  const packetSize=safe?20:([20,100,120,150,200].includes(selected)?selected:20);
+  const packetSize=safe?20:([20,100,150].includes(selected)?selected:20);
   for (let offset=0;offset<job.length;offset+=packetSize) {
     if (!device || !device.gatt.connected || !writer) throw new Error('Bluetooth หลุดระหว่างส่งข้อมูล');
     const part = job.slice(offset,offset+packetSize);
