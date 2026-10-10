@@ -1164,11 +1164,13 @@
         }
 
 
+        // Leave roughly 4 mm of blank space on both sides.
+        ctx.imageSmoothingEnabled = false;
         ctx.drawImage(
           barcodeCanvas,
-          15,
+          32,
           100,
-          width - 30,
+          width - 64,
           80
         );
 
