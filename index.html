@@ -1239,10 +1239,12 @@
   // =========================================================
 
   function readUrlParameters() {
+    labelItems = []; currentIndex = 0;
+    ["product","mfgDate","code"].forEach(id => document.getElementById(id).value = "");
 
     const params =
       new URLSearchParams(
-        window.location.search
+        window.location.hash.slice(1) || window.location.search
       );
 
 
@@ -1570,7 +1572,9 @@
   // BUTTONS
   // =========================================================
 
+  let pendingItemsReload = false;
   function updatePrintButtons() {
+    if (!printing && pendingItemsReload) { pendingItemsReload = false; queueMicrotask(refreshLabelItems); }
     document.getElementById('testBtn').disabled = !connected || printing;
     ['product','mfgDate','code','itemPicker','updatePreview','connectBtn'].forEach(id => document.getElementById(id).disabled = printing);
 
@@ -2004,6 +2008,14 @@ async function printTestLabel() {
   setFormFromItem({productName:'ทดสอบชาไทย',mfgDate:new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),qrCode:'TEST12345678'});
   try { await printCurrentLabel(); } finally { setFormFromItem(original); }
 }
+function refreshLabelItems() {
+  if (printing) { pendingItemsReload = true; return; }
+  clearError();
+  readUrlParameters(); updateBatchUI(); initReprintPicker(); drawPreview();
+  document.getElementById('progressWrap').style.display = 'none';
+  document.getElementById('progressBar').style.width = '0%';
+}
+window.addEventListener('hashchange', refreshLabelItems);
 </script>
 
 </body>
