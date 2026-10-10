@@ -108,7 +108,7 @@ async function sendJob(job) {
   // No automatic retry after a partial transfer. Safe mode uses default-MTU packets.
   const safe=document.getElementById('safeMode').checked;
   const selected=Number(document.getElementById('packetSize').value);
-  const packetSize=safe?20:([20,100,180].includes(selected)?selected:20);
+  const packetSize=safe?20:([20,100,120,150,200].includes(selected)?selected:20);
   for (let offset=0;offset<job.length;offset+=packetSize) {
     if (!device || !device.gatt.connected || !writer) throw new Error('Bluetooth หลุดระหว่างส่งข้อมูล');
     const part = job.slice(offset,offset+packetSize);
