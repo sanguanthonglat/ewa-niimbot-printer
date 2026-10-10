@@ -61,10 +61,10 @@ function formatDisplayDate(value) {
         height: 80, background: '#ffffff', lineColor: '#000000'
       });
       ctx.fillStyle = '#fff';
-      ctx.fillRect(12, 104, canvas.width - 24, 80);
+      ctx.fillRect(12, 104, canvas.width - 24, 88);
       // Leave roughly 4 mm of blank space on both sides.
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(barcode, 32, 108, canvas.width - 64, 72);
+      ctx.drawImage(barcode, 32, 108, canvas.width - 64, 80);
     }
     ctx.fillStyle = '#000';
     var codeFont = code.length > 28 ? 14 : code.length > 24 ? 16 : code.length > 20 ? 18 : 20;
