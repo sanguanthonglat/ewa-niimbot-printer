@@ -62,7 +62,9 @@ function formatDisplayDate(value) {
       });
       ctx.fillStyle = '#fff';
       ctx.fillRect(12, 96, canvas.width - 24, 88);
-      ctx.drawImage(barcode, 15, 100, canvas.width - 30, 80);
+      // Leave roughly 4 mm of blank space on both sides.
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(barcode, 32, 100, canvas.width - 64, 80);
     }
     ctx.fillStyle = '#000';
     var codeFont = code.length > 28 ? 14 : code.length > 24 ? 16 : code.length > 20 ? 18 : 20;
